@@ -6,19 +6,20 @@
 
 namespace xbus {
 
+static constexpr int kMaxMsgOverhead = 7;  // Maximum bytes of overhead.
 static constexpr uint8_t kPreambleVal = 0xFA;
 static constexpr uint8_t kBidVal = 0xFF;
 
-enum class MsgError {
+enum class ParseError {
   kNone,  // No error
   kPreamble,  // Incorrect preamble
   kBid,  // Incorrect BID
-  kLen,  // Incorrect length
+  kLen,  // Insufficient length
   kChecksum,  // Incorrect checksum
 };
 
 struct ParsedMsg {
-  MsgError error;
+  ParseError error;
   MsgId id;
   unsigned int len;
   const uint8_t *data;
@@ -42,17 +43,17 @@ ParsedMsg ParseMsg(const uint8_t *buf, unsigned int len) {
 
   // Minimum message length.
   if (len < 5) {
-    msg.error = MsgError::kLen;
+    msg.error = ParseError::kLen;
     return msg;
   }
 
   if (buf[0] != kPreambleVal) {
-    msg.error = MsgError::kPreamble;
+    msg.error = ParseError::kPreamble;
     return msg;
   }
 
   if (buf[1] != kBidVal) {
-    msg.error = MsgError::kBid;
+    msg.error = ParseError::kBid;
     return msg;
   }
 
@@ -65,7 +66,7 @@ ParsedMsg ParseMsg(const uint8_t *buf, unsigned int len) {
     header_len = 6;
 
     if (len < 7) {
-      msg.error = MsgError::kLen;
+      msg.error = ParseError::kLen;
       return msg;
     }
 
@@ -74,25 +75,27 @@ ParsedMsg ParseMsg(const uint8_t *buf, unsigned int len) {
     msg.len = buf[3];
   }
 
+  const unsigned int total_msg_len = header_len + msg.len + 1;
+
   // Check total message length.
-  if (len < header_len + msg.len + 1) {
-    msg.error = MsgError::kLen;
+  if (len < total_msg_len) {
+    msg.error = ParseError::kLen;
     return msg;
   }
 
   msg.data = buf + header_len;
 
   uint8_t checksum = 0;
-  for (unsigned int i = 1; i < len; ++i) {
+  for (unsigned int i = 1; i < total_msg_len; ++i) {
     checksum += buf[i];
   }
 
   if (checksum != 0) {
-    msg.error = MsgError::kChecksum;
+    msg.error = ParseError::kChecksum;
     return msg;
   }
 
-  msg.error = MsgError::kNone;
+  msg.error = ParseError::kNone;
 
   return msg;
 }

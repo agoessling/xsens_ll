@@ -41,11 +41,30 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "xsens_manager",
+    hdrs = ["xsens_manager.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":xbus_parser",
+    ],
+)
+
 cc_test(
     name = "test_xbus_parser",
     srcs = ["test_xbus_parser.cc"],
     deps = [
         ":xbus_parser",
+        "@gtest",
+        "@gtest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "test_xsens_manager",
+    srcs = ["test_xsens_manager.cc"],
+    deps = [
+        ":xsens_manager",
         "@gtest",
         "@gtest//:gtest_main",
     ],

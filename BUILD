@@ -50,6 +50,15 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "linux_xsens_manager",
+    hdrs = ["linux_xsens_manager.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":xsens_manager",
+    ],
+)
+
 cc_test(
     name = "test_xbus_parser",
     srcs = ["test_xbus_parser.cc"],
@@ -67,5 +76,14 @@ cc_test(
         ":xsens_manager",
         "@gtest",
         "@gtest//:gtest_main",
+    ],
+)
+
+cc_binary(
+    name = "test_linux_xsens_manager",
+    srcs = ["test_linux_xsens_manager.cc"],
+    deps = [
+        ":linux_xsens_manager",
+        "@argparse",
     ],
 )

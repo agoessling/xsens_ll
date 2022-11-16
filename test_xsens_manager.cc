@@ -13,6 +13,7 @@ class FakeXsensManager : public XsensManager {
   FakeXsensManager() { Reset(); }
 
   void Reset() {
+    epoch_time_us_ = 0;
     read_data_.clear();
     write_data_.clear();
     read_calls_ = 0;
@@ -36,6 +37,9 @@ class FakeXsensManager : public XsensManager {
  private:
   int ReadBytes(uint8_t *buf, unsigned int len) override final {
     ++read_calls_;
+
+    // Simulate 10ms per read call.
+    epoch_time_us_ += 10000;
 
     if (read_error_) {
       return -1;
@@ -63,6 +67,9 @@ class FakeXsensManager : public XsensManager {
     return len;
   }
 
+  uint64_t EpochTimeUs() override final { return epoch_time_us_; }
+
+  uint64_t epoch_time_us_;
   std::deque<uint8_t> read_data_;
   std::vector<uint8_t> write_data_;
   int read_calls_;

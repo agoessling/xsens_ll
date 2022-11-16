@@ -110,6 +110,7 @@ class XsensManager {
   // Must be overridden by subclass.
   virtual int ReadBytes(uint8_t *buf, unsigned int len) = 0;
   virtual int WriteBytes(const uint8_t *buf, unsigned int len) = 0;
+  virtual uint64_t EpochTimeUs() = 0;
 
   int FindPreamble(unsigned int start_ind) {
     for (int i = start_ind; i < static_cast<int>(write_index_); ++i) {

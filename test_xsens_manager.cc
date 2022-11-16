@@ -98,7 +98,7 @@ TEST_F(XsensManagerTest, NoMsg) {
 
   XsensManager::MsgInfo info = manager_.ReadMsg();
 
-  EXPECT_EQ(info.status, XsensManager::ReadStatus::kReading);
+  EXPECT_EQ(info.status, XsensManager::ReadStatus::kNoMsg);
   EXPECT_EQ(manager_.ReadCalls(), 1);
 
   // Some data.
@@ -108,7 +108,7 @@ TEST_F(XsensManagerTest, NoMsg) {
 
   info = manager_.ReadMsg();
 
-  EXPECT_EQ(info.status, XsensManager::ReadStatus::kReading);
+  EXPECT_EQ(info.status, XsensManager::ReadStatus::kNoMsg);
   EXPECT_EQ(manager_.ReadCalls(), 1);
 
   // Multiple reads.
@@ -118,7 +118,7 @@ TEST_F(XsensManagerTest, NoMsg) {
 
   info = manager_.ReadMsg();
 
-  EXPECT_EQ(info.status, XsensManager::ReadStatus::kReading);
+  EXPECT_EQ(info.status, XsensManager::ReadStatus::kNoMsg);
   EXPECT_EQ(manager_.ReadCalls(), 2);
 }
 
@@ -384,14 +384,14 @@ TEST_F(XsensManagerTest, AdvanceReadBuffer) {
 
   XsensManager::MsgInfo info = manager_.ReadMsg();
 
-  EXPECT_EQ(info.status, XsensManager::ReadStatus::kReading);
+  EXPECT_EQ(info.status, XsensManager::ReadStatus::kReadingMsg);
   EXPECT_EQ(manager_.ReadCalls(), 1);
   EXPECT_EQ(info.msg.id, MsgId::kReqDID);
   EXPECT_EQ(info.msg.len, 0xAA);
 
   info = manager_.ReadMsg();
 
-  EXPECT_EQ(info.status, XsensManager::ReadStatus::kReading);
+  EXPECT_EQ(info.status, XsensManager::ReadStatus::kReadingMsg);
   EXPECT_EQ(manager_.ReadCalls(), 2);
   EXPECT_EQ(info.msg.id, MsgId::kReqDID);
   EXPECT_EQ(info.msg.len, 0xAA);
@@ -415,14 +415,14 @@ TEST_F(XsensManagerTest, ResetReadBuffer) {
 
   XsensManager::MsgInfo info = manager_.ReadMsg();
 
-  EXPECT_EQ(info.status, XsensManager::ReadStatus::kReading);
+  EXPECT_EQ(info.status, XsensManager::ReadStatus::kReadingMsg);
   EXPECT_EQ(manager_.ReadCalls(), 1);
   EXPECT_EQ(info.msg.id, MsgId::kReqDID);
   EXPECT_EQ(info.msg.len, 0xAA);
 
   info = manager_.ReadMsg();
 
-  EXPECT_EQ(info.status, XsensManager::ReadStatus::kReading);
+  EXPECT_EQ(info.status, XsensManager::ReadStatus::kReadingMsg);
   EXPECT_EQ(manager_.ReadCalls(), 2);
   EXPECT_EQ(info.msg.id, MsgId::kReqDID);
   EXPECT_EQ(info.msg.len, 0xAA);

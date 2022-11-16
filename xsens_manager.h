@@ -11,7 +11,8 @@ class XsensManager {
  public:
   enum class ReadStatus {
     kSuccess,  // Parsed message available.
-    kReading,  // Waiting for reception of rest of message.
+    kNoMsg,  // No message received.
+    kReadingMsg,  // Waiting for reception of rest of message.
     kErrorOverflow,  // Receive buffer overflow.
     kErrorMsgTooLarge,  // Received message too large.
     kErrorReadCall,  // Error during user provided read call.
@@ -27,7 +28,7 @@ class XsensManager {
 
   MsgInfo ReadMsg() {
     MsgInfo info = {
-        .status = ReadStatus::kReading,
+        .status = ReadStatus::kNoMsg,
         .msg = {.len = 0, .data = nullptr},
     };
 
@@ -87,6 +88,9 @@ class XsensManager {
 
         return info;
       }
+
+      // Currently reading message.
+      info.status = ReadStatus::kReadingMsg;
     }
 
     return info;

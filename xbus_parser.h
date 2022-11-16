@@ -36,10 +36,7 @@ T BigEndian32(const uint8_t *buf) {
 }
 
 ParsedMsg ParseMsg(const uint8_t *buf, unsigned int len) {
-  ParsedMsg msg = {
-      .len = 0,
-      .data = nullptr,
-  };
+  ParsedMsg msg = {.len = 0, .data = nullptr};
 
   // Minimum message length.
   if (len < 5) {

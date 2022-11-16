@@ -29,11 +29,7 @@ class XsensManager {
   MsgInfo ReadMsg() {
     MsgInfo info = {
         .status = ReadStatus::kReading,
-        .msg =
-            {
-                .len = 0,
-                .data = nullptr,
-            },
+        .msg = {.len = 0, .data = nullptr},
     };
 
     bool data_available = true;
@@ -95,6 +91,13 @@ class XsensManager {
     }
 
     return info;
+  }
+
+  void AdvanceReadBuffer() { ++start_index_; }
+
+  void ResetReadBuffer() {
+    write_index_ = 0;
+    start_index_ = 0;
   }
 
  private:

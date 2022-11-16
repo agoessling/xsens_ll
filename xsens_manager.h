@@ -23,8 +23,7 @@ class XsensManager {
     ParsedMsg msg;
   };
 
-  XsensManager(int (*read_func)(uint8_t *buf, unsigned int len))
-      : write_index_{0}, start_index_{0}, read_func_{read_func} {}
+  XsensManager() : write_index_{0}, start_index_{0} {}
 
   MsgInfo ReadMsg() {
     MsgInfo info = {
@@ -40,7 +39,7 @@ class XsensManager {
         return info;
       }
 
-      const int bytes_read = read_func_(msg_buf_ + write_index_, kBytesPerRead);
+      const int bytes_read = ReadBytes(msg_buf_ + write_index_, kBytesPerRead);
       data_available = bytes_read == kBytesPerRead;
 
       if (bytes_read < 0) {
@@ -104,10 +103,9 @@ class XsensManager {
   static constexpr unsigned int kMsgBufLen = 512;
   static constexpr unsigned int kBytesPerRead = 64;
 
-  uint8_t msg_buf_[kMsgBufLen];
-  unsigned int write_index_;
-  unsigned int start_index_;
-  int (*read_func_)(uint8_t *buf, unsigned int len);
+  // Must be overridden by subclass.
+  virtual int ReadBytes(uint8_t *buf, unsigned int len) = 0;
+  virtual int WriteBytes(const uint8_t *buf, unsigned int len) = 0;
 
   int FindPreamble(unsigned int start_ind) {
     for (int i = start_ind; i < static_cast<int>(write_index_); ++i) {
@@ -145,6 +143,11 @@ class XsensManager {
 
     return true;
   }
+
+  uint8_t msg_buf_[kMsgBufLen];
+  unsigned int write_index_;
+  unsigned int start_index_;
+  int (*read_func_)(uint8_t *buf, unsigned int len);
 };
 
 };  // namespace xbus

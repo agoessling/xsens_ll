@@ -64,6 +64,10 @@ class FakeXsensManager : public XsensManager {
       return -1;
     }
 
+    for (unsigned int i = 0; i < len; ++i) {
+      write_data_.push_back(buf[i]);
+    }
+
     return len;
   }
 
@@ -445,4 +449,41 @@ TEST_F(XsensManagerTest, ResetReadBuffer) {
   EXPECT_EQ(info.msg.id, MsgId::kGoToConfig);
   EXPECT_EQ(info.msg.len, 0);
   EXPECT_EQ(info.msg.data[0], kGoToConfigMsg[4]);
+}
+
+TEST_F(XsensManagerTest, GoToConfig) {
+  uint8_t msg[32];
+  uint8_t ack[32];
+
+  const unsigned int msg_len = PackMsg(msg, sizeof(msg), MsgId::kGoToConfig, nullptr, 0).len;
+  const unsigned int ack_len = PackMsg(ack, sizeof(ack), MsgId::kGoToConfigAck, nullptr, 0).len;
+
+  const std::vector<uint8_t> msg_vec(msg, msg + msg_len);
+  const std::vector<uint8_t> ack_vec(ack, ack + ack_len);
+
+  manager_.AppendReadData(ack_vec);
+  XsensManager::ConfigResult result = manager_.GoToConfig();
+
+  EXPECT_EQ(result, XsensManager::ConfigResult::kSuccess);
+  EXPECT_EQ(manager_.ReadCalls(), 1);
+  EXPECT_EQ(manager_.WriteCalls(), 1);
+  EXPECT_EQ(manager_.WriteData(), msg_vec);
+}
+
+TEST_F(XsensManagerTest, GoToConfigTimeout) {
+  uint8_t msg[32];
+  uint8_t ack[32];
+
+  const unsigned int msg_len = PackMsg(msg, sizeof(msg), MsgId::kGoToConfig, nullptr, 0).len;
+  const unsigned int ack_len = PackMsg(ack, sizeof(ack), MsgId::kGoToConfigAck, nullptr, 0).len;
+
+  const std::vector<uint8_t> msg_vec(msg, msg + msg_len);
+  const std::vector<uint8_t> ack_vec(ack, ack + ack_len);
+
+  XsensManager::ConfigResult result = manager_.GoToConfig();
+
+  EXPECT_EQ(result, XsensManager::ConfigResult::kErrorTimeout);
+  EXPECT_GT(manager_.ReadCalls(), 1);
+  EXPECT_EQ(manager_.WriteCalls(), 1);
+  EXPECT_EQ(manager_.WriteData(), msg_vec);
 }

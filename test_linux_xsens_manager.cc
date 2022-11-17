@@ -18,6 +18,7 @@ int main(int argc, char **argv) {
     std::exit(-1);
   }
 
+  using namespace xbus;
   using namespace xbus::linux;
 
   std::unique_ptr<SerialXsensManager> manager = SerialXsensManager::Create(
@@ -25,6 +26,13 @@ int main(int argc, char **argv) {
 
   if (!manager) {
     std::cerr << "Could not create manager." << std::endl;
+    std::exit(-1);
+  }
+
+  XsensManager::ConfigResult result = manager->GoToConfig();
+  if (result != XsensManager::ConfigResult::kSuccess) {
+    std::cerr << "GoToConfig not successful. ConfigResult = " << static_cast<unsigned int>(result);
+    std::cerr << std::endl;
     std::exit(-1);
   }
 

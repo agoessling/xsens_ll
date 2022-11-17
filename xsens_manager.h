@@ -19,6 +19,15 @@ class XsensManager {
     kErrorParse,  // Error with parsing.  See nested msg.error for further info.
   };
 
+  enum class ConfigResult {
+    kSuccess,
+    kErrorTimeout,  // Timeout while waiting on acknowledgement
+    kErrorPack,  // Error in packing.
+    kErrorWriteCall,  // Error during call to WriteBytes.
+    kErrorConfig,  // Xsens responded with an error.
+    kErrorRead,  // Error during MsgRead.
+  };
+
   struct MsgInfo {
     ReadStatus status;
     ParsedMsg msg;
@@ -35,12 +44,12 @@ class XsensManager {
     bool data_available = true;
     while (data_available) {
       // Check for space in receive buffer. (Don't think this can ever be exercised)
-      if (kMsgBufLen - write_index_ < kBytesPerRead) {
+      if (kReadBufLen - write_index_ < kBytesPerRead) {
         info.status = ReadStatus::kErrorOverflow;
         return info;
       }
 
-      const int bytes_read = ReadBytes(msg_buf_ + write_index_, kBytesPerRead);
+      const int bytes_read = ReadBytes(read_buf_ + write_index_, kBytesPerRead);
       data_available = bytes_read == kBytesPerRead;
 
       if (bytes_read < 0) {
@@ -58,13 +67,13 @@ class XsensManager {
         continue;
       }
 
-      info.msg = ParseMsg(msg_buf_, write_index_);
+      info.msg = ParseMsg(read_buf_, write_index_);
 
       if (info.msg.error == ParseError::kNone) {
         info.status = ReadStatus::kSuccess;
 
         // Next iteration start after message end.
-        start_index_ = (info.msg.data - msg_buf_) + info.msg.len + 1;
+        start_index_ = (info.msg.data - read_buf_) + info.msg.len + 1;
 
         return info;
       }
@@ -80,7 +89,7 @@ class XsensManager {
       }
 
       // Message too big.
-      if (info.msg.len + kMaxMsgOverhead > kMsgBufLen) {
+      if (info.msg.len + kMaxMsgOverhead > kReadBufLen) {
         info.status = ReadStatus::kErrorMsgTooLarge;
 
         // Next iteration start past this preamble.
@@ -103,9 +112,49 @@ class XsensManager {
     start_index_ = 0;
   }
 
+  ConfigResult GoToConfig() {
+    PackResult result = PackMsg(write_buf_, kWriteBufLen, MsgId::kGoToConfig, nullptr, 0);
+
+    if (result.error != PackError::kNone) {
+      return ConfigResult::kErrorPack;
+    }
+
+    const uint64_t now_us = EpochTimeUs();
+
+    if (!WriteAllBytesBlocking(write_buf_, result.len)) {
+      return ConfigResult::kErrorWriteCall;
+    }
+
+    while (EpochTimeUs() - now_us < kConfigTimeoutUs) {
+      const MsgInfo info = ReadMsg();
+
+      if (info.status == ReadStatus::kSuccess) {
+        if (info.msg.id == MsgId::kGoToConfigAck) {
+          return ConfigResult::kSuccess;
+        }
+
+        if (info.msg.id == MsgId::kError) {
+          return ConfigResult::kErrorConfig;
+        }
+
+        continue;
+      }
+
+      if (info.status == ReadStatus::kNoMsg || info.status == ReadStatus::kReadingMsg) {
+        continue;
+      }
+
+      return ConfigResult::kErrorRead;
+    }
+
+    return ConfigResult::kErrorTimeout;
+  }
+
  private:
-  static constexpr unsigned int kMsgBufLen = 512;
+  static constexpr unsigned int kReadBufLen = 512;
+  static constexpr unsigned int kWriteBufLen = 512;
   static constexpr unsigned int kBytesPerRead = 64;
+  static constexpr unsigned int kConfigTimeoutUs = 100000;
 
   // Must be overridden by subclass.
   virtual int ReadBytes(uint8_t *buf, unsigned int len) = 0;
@@ -114,7 +163,7 @@ class XsensManager {
 
   int FindPreamble(unsigned int start_ind) {
     for (int i = start_ind; i < static_cast<int>(write_index_); ++i) {
-      if (msg_buf_[i] == kPreambleVal) {
+      if (read_buf_[i] == kPreambleVal) {
         return i;
       }
     }
@@ -129,7 +178,7 @@ class XsensManager {
       return;
     }
 
-    memmove(msg_buf_, msg_buf_ + start_ind, write_index_ - start_ind);
+    memmove(read_buf_, read_buf_ + start_ind, write_index_ - start_ind);
     write_index_ -= start_ind;
   }
 
@@ -149,7 +198,23 @@ class XsensManager {
     return true;
   }
 
-  uint8_t msg_buf_[kMsgBufLen];
+  bool WriteAllBytesBlocking(const uint8_t *buf, unsigned int len) {
+    unsigned int bytes_left = len;
+    while (bytes_left > 0) {
+      int bytes_written = WriteBytes(buf + len - bytes_left, bytes_left);
+
+      if (bytes_written < 0) {
+        return false;
+      }
+
+      bytes_left -= bytes_written;
+    }
+
+    return true;
+  }
+
+  uint8_t read_buf_[kReadBufLen];
+  uint8_t write_buf_[kWriteBufLen];
   unsigned int write_index_;
   unsigned int start_index_;
   int (*read_func_)(uint8_t *buf, unsigned int len);

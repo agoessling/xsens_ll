@@ -26,13 +26,60 @@ struct ParsedMsg {
 };
 
 template <typename T>
-T BigEndian16(const uint8_t *buf) {
-  return static_cast<T>((buf[0] << 8U) | buf[1]);
+T UnpackBigEndian16(const uint8_t *buf) {
+  static_assert(sizeof(T) >= 2);
+  return static_cast<T>((static_cast<uint16_t>(buf[0]) << 8) |
+                        (static_cast<uint16_t>(buf[1]) << 0));
 }
 
 template <typename T>
-T BigEndian32(const uint8_t *buf) {
-  return static_cast<T>((buf[0] << 24U) | (buf[1] << 16U) | (buf[2] << 8U) | buf[3]);
+T UnpackBigEndian32(const uint8_t *buf) {
+  static_assert(sizeof(T) >= 4);
+  return static_cast<T>(
+      (static_cast<uint32_t>(buf[0]) << 24) | (static_cast<uint32_t>(buf[1]) << 16) |
+      (static_cast<uint32_t>(buf[2]) << 8) | (static_cast<uint32_t>(buf[3]) << 0));
+}
+
+template <typename T>
+T UnpackBigEndian64(const uint8_t *buf) {
+  static_assert(sizeof(T) >= 8);
+  return static_cast<T>(
+      (static_cast<uint64_t>(buf[0]) << 56) | (static_cast<uint64_t>(buf[1]) << 48) |
+      (static_cast<uint64_t>(buf[2]) << 40) | (static_cast<uint64_t>(buf[3]) << 32) |
+      (static_cast<uint64_t>(buf[4]) << 24) | (static_cast<uint64_t>(buf[5]) << 16) |
+      (static_cast<uint64_t>(buf[6]) << 8) | (static_cast<uint64_t>(buf[7]) << 0));
+}
+
+template <typename T>
+void PackBigEndian16(T data, uint8_t *buf) {
+  static_assert(sizeof(data) <= 2);
+  uint16_t raw_data = static_cast<uint16_t>(data);
+  buf[0] = static_cast<uint8_t>(raw_data >> 8);
+  buf[1] = static_cast<uint8_t>(raw_data >> 0);
+}
+
+template <typename T>
+void PackBigEndian32(T data, uint8_t *buf) {
+  static_assert(sizeof(data) <= 4);
+  uint32_t raw_data = static_cast<uint32_t>(data);
+  buf[0] = static_cast<uint8_t>(raw_data >> 24);
+  buf[1] = static_cast<uint8_t>(raw_data >> 16);
+  buf[2] = static_cast<uint8_t>(raw_data >> 8);
+  buf[3] = static_cast<uint8_t>(raw_data >> 0);
+}
+
+template <typename T>
+void PackBigEndian64(T data, uint8_t *buf) {
+  static_assert(sizeof(data) <= 8);
+  uint64_t raw_data = static_cast<uint64_t>(data);
+  buf[0] = static_cast<uint8_t>(raw_data >> 56);
+  buf[1] = static_cast<uint8_t>(raw_data >> 48);
+  buf[2] = static_cast<uint8_t>(raw_data >> 40);
+  buf[3] = static_cast<uint8_t>(raw_data >> 32);
+  buf[4] = static_cast<uint8_t>(raw_data >> 24);
+  buf[5] = static_cast<uint8_t>(raw_data >> 16);
+  buf[6] = static_cast<uint8_t>(raw_data >> 8);
+  buf[7] = static_cast<uint8_t>(raw_data >> 0);
 }
 
 ParsedMsg ParseMsg(const uint8_t *buf, unsigned int len) {
@@ -67,7 +114,7 @@ ParsedMsg ParseMsg(const uint8_t *buf, unsigned int len) {
       return msg;
     }
 
-    msg.len = BigEndian16<unsigned int>(&buf[4]);
+    msg.len = UnpackBigEndian16<unsigned int>(&buf[4]);
   } else {
     msg.len = buf[3];
   }
@@ -95,6 +142,61 @@ ParsedMsg ParseMsg(const uint8_t *buf, unsigned int len) {
   msg.error = ParseError::kNone;
 
   return msg;
+}
+
+enum class PackError {
+  kNone,
+  kOverflow,  // Buffer not big enough for packed message.
+  kDataTooLarge,  // Data packet too large for xbus format.
+};
+
+struct PackResult {
+  PackError error;
+  unsigned int len;
+};
+
+PackResult PackMsg(uint8_t *buf, unsigned int buf_len, MsgId id, const uint8_t *data,
+                   unsigned int data_len) {
+  PackResult result = {.error = PackError::kNone, .len = 0};
+
+  if (data_len > UINT16_MAX) {
+    result.error = PackError::kDataTooLarge;
+    return result;
+  }
+
+  const bool extended = data_len > 254;
+  const unsigned int header_len = extended ? 6 : 4;
+  const unsigned int packed_len = header_len + data_len + 1;
+
+  if (packed_len > buf_len) {
+    result.error = PackError::kOverflow;
+    return result;
+  }
+
+  buf[0] = kPreambleVal;
+  buf[1] = kBidVal;
+  buf[2] = static_cast<uint8_t>(id);
+
+  if (extended) {
+    buf[3] = 0xFF;
+    PackBigEndian16(static_cast<uint16_t>(data_len), &buf[4]);
+  } else {
+    buf[3] = static_cast<uint8_t>(data_len);
+  }
+
+  for (unsigned int i = 0; i < data_len; ++i) {
+    buf[header_len + i] = data[i];
+  }
+
+  uint8_t checksum = 0;
+  for (unsigned int i = 1; i < packed_len - 1; ++i) {
+    checksum -= buf[i];
+  }
+
+  buf[packed_len - 1] = checksum;
+
+  result.len = packed_len;
+  return result;
 }
 
 };  // namespace xbus

@@ -41,7 +41,10 @@ class SerialXsensManager : public XsensManager {
   SerialXsensManager& operator=(const SerialXsensManager&) = delete;
 
  private:
-  SerialXsensManager() : fd_{-1} {}
+  static constexpr int kNumSysCallRetries = 3;
+  static constexpr int kTimeoutUs = 100'000;
+
+  SerialXsensManager() : XsensManager(kTimeoutUs), fd_{-1} {}
 
   static bool SetupBlockingSerial(int fd, speed_t baud_rate, cc_t timeout_deciseconds) {
     if (fd < 0) {
@@ -94,10 +97,37 @@ class SerialXsensManager : public XsensManager {
     return true;
   }
 
-  int ReadBytes(uint8_t *buf, unsigned int len) override final { return read(fd_, buf, len); }
+  int ReadBytes(uint8_t *buf, unsigned int len) override final {
+    int retries = kNumSysCallRetries;
+    int ret;
+    while (retries--) {
+      ret = read(fd_, buf, len);
+      if (ret >= 0) break;
+      perror("read() failed");
+    }
+    return ret;
+  }
+
+  int FlushBytes() override final {
+    int retries = kNumSysCallRetries;
+    int ret;
+    while (retries--) {
+      ret = tcflush(fd_, TCIOFLUSH);
+      if (ret >= 0) break;
+      perror("tcflush() failed");
+    }
+    return ret;
+  }
 
   int WriteBytes(const uint8_t *buf, unsigned int len) override final {
-    return write(fd_, buf, len);
+    int retries = kNumSysCallRetries;
+    int ret;
+    while (retries--) {
+      ret = write(fd_, buf, len);
+      if (ret >= 0) break;
+      perror("write() failed");
+    }
+    return ret;
   }
 
   uint64_t EpochTimeUs() {

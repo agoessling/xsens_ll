@@ -26,6 +26,7 @@ class XsensManager {
     kErrorWriteCall,  // Error during call to WriteBytes.
     kErrorConfig,  // Xsens responded with an error.
     kErrorRead,  // Error during MsgRead.
+    kErrorLen,  // Response length incorrect.
   };
 
   struct MsgInfo {
@@ -33,7 +34,11 @@ class XsensManager {
     ParsedMsg msg;
   };
 
-  XsensManager() : write_index_{0}, start_index_{0} {}
+  XsensManager(unsigned int timeout_us)
+      : write_index_{0},
+        start_index_{0},
+        default_timeout_us_{timeout_us},
+        timeout_us_{default_timeout_us_} {}
 
   MsgInfo ReadMsg() {
     MsgInfo info = {
@@ -112,54 +117,69 @@ class XsensManager {
     start_index_ = 0;
   }
 
-  ConfigResult GoToConfig() {
-    PackResult result = PackMsg(write_buf_, kWriteBufLen, MsgId::kGoToConfig, nullptr, 0);
+  ConfigResult GoToConfig() { return SendConfig(MsgId::kGoToConfig).result; }
 
-    if (result.error != PackError::kNone) {
-      return ConfigResult::kErrorPack;
+  ConfigResult GetDeviceId(uint32_t *device_id) {
+    ConfigResponse resp = SendConfig(MsgId::kReqDID);
+
+    if (resp.result != ConfigResult::kSuccess) return resp.result;
+
+    if (resp.len == 4) {
+      *device_id = UnpackBigEndian32<uint32_t>(resp.data);
+      return ConfigResult::kSuccess;
+    }
+    if (resp.len == 8) {
+      *device_id = UnpackBigEndian32<uint32_t>(resp.data + 4);
+      return ConfigResult::kSuccess;
     }
 
-    const uint64_t now_us = EpochTimeUs();
+    return ConfigResult::kErrorLen;
+  }
 
-    if (!WriteAllBytesBlocking(write_buf_, result.len)) {
-      return ConfigResult::kErrorWriteCall;
-    }
+  ConfigResult GetProductCode(const char **str, unsigned int *len) {
+    ConfigResponse resp = SendConfig(MsgId::kReqProductCode);
 
-    while (EpochTimeUs() - now_us < kConfigTimeoutUs) {
-      const MsgInfo info = ReadMsg();
+    if (resp.result != ConfigResult::kSuccess) return resp.result;
 
-      if (info.status == ReadStatus::kSuccess) {
-        if (info.msg.id == MsgId::kGoToConfigAck) {
-          return ConfigResult::kSuccess;
-        }
+    *str = reinterpret_cast<const char *>(resp.data);
+    *len = resp.len;
 
-        if (info.msg.id == MsgId::kError) {
-          return ConfigResult::kErrorConfig;
-        }
+    return ConfigResult::kSuccess;
+  }
 
-        continue;
-      }
+  ConfigResult RunSelfTest(bool *pass) {
+    SetTimeoutUs(1'000'000);
+    ConfigResponse resp = SendConfig(MsgId::kRunSelftest);
+    RestoreTimeout();
 
-      if (info.status == ReadStatus::kNoMsg || info.status == ReadStatus::kReadingMsg) {
-        continue;
-      }
+    if (resp.result != ConfigResult::kSuccess) return resp.result;
+    if (resp.len != 2) return ConfigResult::kErrorLen;
 
-      return ConfigResult::kErrorRead;
-    }
+    uint16_t test = UnpackBigEndian16<uint16_t>(resp.data);
 
-    return ConfigResult::kErrorTimeout;
+    *pass = (test & 0x7FF) == 0x7FF;
+    return ConfigResult::kSuccess;
   }
 
  private:
   static constexpr unsigned int kReadBufLen = 512;
   static constexpr unsigned int kWriteBufLen = 512;
   static constexpr unsigned int kBytesPerRead = 64;
-  static constexpr unsigned int kConfigTimeoutUs = 100000;
+
+  struct ConfigResponse {
+    ConfigResult result;
+    const uint8_t *data;
+    unsigned int len;
+  };
 
   // Must be overridden by subclass.
   virtual int ReadBytes(uint8_t *buf, unsigned int len) = 0;
+  virtual int FlushBytes() = 0;
   virtual int WriteBytes(const uint8_t *buf, unsigned int len) = 0;
   virtual uint64_t EpochTimeUs() = 0;
+
+  void SetTimeoutUs(unsigned int timeout_us) { timeout_us_ = timeout_us; }
+  void RestoreTimeout() { timeout_us_ = default_timeout_us_; }
 
   int FindPreamble(unsigned int start_ind) {
     for (int i = start_ind; i < static_cast<int>(write_index_); ++i) {
@@ -213,11 +233,51 @@ class XsensManager {
     return true;
   }
 
+  ConfigResponse SendConfig(MsgId id) {
+    ConfigResponse resp;
+
+    PackResult result = PackMsg(write_buf_, kWriteBufLen, id, nullptr, 0);
+
+    if (result.error != PackError::kNone) {
+      resp.result = ConfigResult::kErrorPack;
+      return resp;
+    }
+
+    if (!WriteAllBytesBlocking(write_buf_, result.len)) {
+      resp.result = ConfigResult::kErrorWriteCall;
+      return resp;
+    }
+
+    const uint64_t now_us = EpochTimeUs();
+    while (EpochTimeUs() - now_us < timeout_us_) {
+      const MsgInfo info = ReadMsg();
+
+      if (info.status == ReadStatus::kSuccess) {
+        // Most response IDs are incremented by one.
+        if (info.msg.id == static_cast<MsgId>(static_cast<int>(id) + 1)) {
+          resp.result = ConfigResult::kSuccess;
+          resp.data = info.msg.data;
+          resp.len = info.msg.len;
+          return resp;
+        }
+
+        if (info.msg.id == MsgId::kError) {
+          resp.result = ConfigResult::kErrorConfig;
+          return resp;
+        }
+      }
+    }
+
+    resp.result = ConfigResult::kErrorTimeout;
+    return resp;
+  }
+
   uint8_t read_buf_[kReadBufLen];
   uint8_t write_buf_[kWriteBufLen];
   unsigned int write_index_;
   unsigned int start_index_;
-  int (*read_func_)(uint8_t *buf, unsigned int len);
+  unsigned int default_timeout_us_;
+  unsigned int timeout_us_;
 };
 
 };  // namespace xbus

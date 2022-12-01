@@ -1,6 +1,6 @@
 #pragma once
 
-namespace xbus {
+namespace xsens {
 
 // https://www.xsens.com/hubfs/Downloads/Manuals/MT_Low-Level_Documentation.pdf
 // Section 8.5
@@ -100,6 +100,8 @@ enum class MsgId {
   kSetExtOutputMode = 0x86,  // Sets the extended output mode
   kExtOutputMode = 0x87,  // Device returns the current extended outputmode
   kSetExtOutputModeAck = 0x87,  // Device acknowledges SetExtOutputMode
+  kReqPortConfig = 0x8C,  // Request the port configuration depending on size.
+  kSetPortConfig = 0x8C,  // Set the port configuration depending on size.
   kReqStringOutputTypes = 0x8E,  // Request the configuration of the NMEA dataoutput
   kSetStringOutputTypes = 0x8E,  // Configures the NMEA data output
   kReqStringOutputTypesAck = 0x8F,  // Device returns the NMEA outputconfiguration
@@ -109,6 +111,10 @@ enum class MsgId {
   kReserved18 = 0xA6,  // Reserved
   kReserved19 = 0xA7,  // Reserved
   kAdjustUTCTime = 0xA8,  // Sets correction ticks to UTC time
+  kReqGnssReceiverSettings = 0xAC,  // Request the GNSS settings
+  kReqGnssReceiverSettingsAck = 0xAD,  // Acknowledge the request of the GNSS settings
+  kSetGnssReceiverSettings = 0xAC,  // Set the GNSS settings
+  kSetGnssReceiverSettingsAck = 0xAD,  // Acknowledge the set of the GNSS settings
   kReqOutputConfiguration = 0xC0,  // Request the current output configuration
   kSetOutputConfiguration = 0xC0,  // Sets the output configuration
   kReqOutputConfigurationAck = 0xC1,  // Device returns the output configuration
@@ -149,4 +155,4 @@ enum class MsgId {
   kSetRotationQuaternionAck = 0xED,  // Device acknowledges SetRotationQuaternion
 };
 
-};  // namespace xbus
+};  // namespace xsens

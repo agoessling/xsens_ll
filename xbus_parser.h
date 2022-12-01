@@ -4,7 +4,7 @@
 
 #include "msg_id.h"
 
-namespace xbus {
+namespace xsens {
 
 static constexpr int kMaxMsgOverhead = 7;  // Maximum bytes of overhead.
 static constexpr uint8_t kPreambleVal = 0xFA;
@@ -27,41 +27,42 @@ struct ParsedMsg {
 
 template <typename T>
 T UnpackBigEndian16(const uint8_t *buf) {
-  static_assert(sizeof(T) >= 2);
-  return static_cast<T>((static_cast<uint16_t>(buf[0]) << 8) |
-                        (static_cast<uint16_t>(buf[1]) << 0));
+  static_assert(sizeof(T) == 2);
+  uint16_t raw_val = (static_cast<uint16_t>(buf[0]) << 8) |
+                     (static_cast<uint16_t>(buf[1]) << 0);
+  return reinterpret_cast<T&>(raw_val);
 }
 
 template <typename T>
 T UnpackBigEndian32(const uint8_t *buf) {
-  static_assert(sizeof(T) >= 4);
-  return static_cast<T>(
-      (static_cast<uint32_t>(buf[0]) << 24) | (static_cast<uint32_t>(buf[1]) << 16) |
-      (static_cast<uint32_t>(buf[2]) << 8) | (static_cast<uint32_t>(buf[3]) << 0));
+  static_assert(sizeof(T) == 4);
+  uint32_t raw_val = (static_cast<uint32_t>(buf[0]) << 24) | (static_cast<uint32_t>(buf[1]) << 16) |
+                     (static_cast<uint32_t>(buf[2]) << 8) | (static_cast<uint32_t>(buf[3]) << 0);
+  return reinterpret_cast<T&>(raw_val);
 }
 
 template <typename T>
 T UnpackBigEndian64(const uint8_t *buf) {
-  static_assert(sizeof(T) >= 8);
-  return static_cast<T>(
-      (static_cast<uint64_t>(buf[0]) << 56) | (static_cast<uint64_t>(buf[1]) << 48) |
-      (static_cast<uint64_t>(buf[2]) << 40) | (static_cast<uint64_t>(buf[3]) << 32) |
-      (static_cast<uint64_t>(buf[4]) << 24) | (static_cast<uint64_t>(buf[5]) << 16) |
-      (static_cast<uint64_t>(buf[6]) << 8) | (static_cast<uint64_t>(buf[7]) << 0));
+  static_assert(sizeof(T) == 8);
+  uint64_t raw_val = (static_cast<uint64_t>(buf[0]) << 56) | (static_cast<uint64_t>(buf[1]) << 48) |
+                     (static_cast<uint64_t>(buf[2]) << 40) | (static_cast<uint64_t>(buf[3]) << 32) |
+                     (static_cast<uint64_t>(buf[4]) << 24) | (static_cast<uint64_t>(buf[5]) << 16) |
+                     (static_cast<uint64_t>(buf[6]) << 8) | (static_cast<uint64_t>(buf[7]) << 0);
+  return reinterpret_cast<T&>(raw_val);
 }
 
 template <typename T>
 void PackBigEndian16(T data, uint8_t *buf) {
-  static_assert(sizeof(data) <= 2);
-  uint16_t raw_data = static_cast<uint16_t>(data);
+  static_assert(sizeof(data) == 2);
+  const uint16_t raw_data = reinterpret_cast<uint16_t&>(data);
   buf[0] = static_cast<uint8_t>(raw_data >> 8);
   buf[1] = static_cast<uint8_t>(raw_data >> 0);
 }
 
 template <typename T>
 void PackBigEndian32(T data, uint8_t *buf) {
-  static_assert(sizeof(data) <= 4);
-  uint32_t raw_data = static_cast<uint32_t>(data);
+  static_assert(sizeof(data) == 4);
+  const uint32_t raw_data = reinterpret_cast<uint32_t&>(data);
   buf[0] = static_cast<uint8_t>(raw_data >> 24);
   buf[1] = static_cast<uint8_t>(raw_data >> 16);
   buf[2] = static_cast<uint8_t>(raw_data >> 8);
@@ -70,8 +71,8 @@ void PackBigEndian32(T data, uint8_t *buf) {
 
 template <typename T>
 void PackBigEndian64(T data, uint8_t *buf) {
-  static_assert(sizeof(data) <= 8);
-  uint64_t raw_data = static_cast<uint64_t>(data);
+  static_assert(sizeof(data) == 8);
+  const uint64_t raw_data = reinterpret_cast<uint64_t&>(data);
   buf[0] = static_cast<uint8_t>(raw_data >> 56);
   buf[1] = static_cast<uint8_t>(raw_data >> 48);
   buf[2] = static_cast<uint8_t>(raw_data >> 40);
@@ -114,7 +115,7 @@ ParsedMsg ParseMsg(const uint8_t *buf, unsigned int len) {
       return msg;
     }
 
-    msg.len = UnpackBigEndian16<unsigned int>(&buf[4]);
+    msg.len = UnpackBigEndian16<uint16_t>(&buf[4]);
   } else {
     msg.len = buf[3];
   }
@@ -199,4 +200,4 @@ PackResult PackMsg(uint8_t *buf, unsigned int buf_len, MsgId id, const uint8_t *
   return result;
 }
 
-};  // namespace xbus
+};  // namespace xsens

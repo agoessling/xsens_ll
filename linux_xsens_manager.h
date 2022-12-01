@@ -12,7 +12,7 @@
 
 #include "xsens_manager.h"
 
-namespace xbus {
+namespace xsens {
 namespace linux {
 
 class SerialXsensManager : public XsensManager {
@@ -141,4 +141,4 @@ class SerialXsensManager : public XsensManager {
 };
 
 };  // namespace linux
-};  // namespace xbus
+};  // namespace xsens

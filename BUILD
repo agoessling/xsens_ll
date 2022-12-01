@@ -33,6 +33,12 @@ cc_library(
 )
 
 cc_library(
+    name = "xsens_types",
+    hdrs = ["xsens_types.h"],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
     name = "xbus_parser",
     hdrs = ["xbus_parser.h"],
     visibility = ["//visibility:public"],
@@ -46,7 +52,9 @@ cc_library(
     hdrs = ["xsens_manager.h"],
     visibility = ["//visibility:public"],
     deps = [
+        ":msg_id",
         ":xbus_parser",
+        ":xsens_types",
     ],
 )
 

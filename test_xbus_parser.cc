@@ -5,7 +5,7 @@
 #include "msg_id.h"
 #include "xbus_parser.h"
 
-using namespace xbus;
+using namespace xsens;
 
 TEST(Pack, BigEndian16) {
   const int16_t original = -3284;
@@ -37,6 +37,22 @@ TEST(Pack, BigEndian32) {
   EXPECT_EQ(unpacked, original);
 }
 
+TEST(Pack, BigEndian32Float) {
+  const float original = -123.4567e12;
+
+  uint8_t buf[4];
+  PackBigEndian32(original, buf);
+
+  EXPECT_EQ(buf[0], 0xD6);
+  EXPECT_EQ(buf[1], 0xE0);
+  EXPECT_EQ(buf[2], 0x91);
+  EXPECT_EQ(buf[3], 0x01);
+
+  const float unpacked = UnpackBigEndian32<float>(buf);
+
+  EXPECT_EQ(unpacked, original);
+}
+
 TEST(Pack, BigEndian64) {
   const int64_t original = -12345678901;
 
@@ -53,6 +69,26 @@ TEST(Pack, BigEndian64) {
   EXPECT_EQ(buf[7], 0xCB);
 
   const int64_t unpacked = UnpackBigEndian64<int64_t>(buf);
+
+  EXPECT_EQ(unpacked, original);
+}
+
+TEST(Pack, BigEndian64Double) {
+  const double original = -123.4567e12;
+
+  uint8_t buf[8];
+  PackBigEndian64(original, buf);
+
+  EXPECT_EQ(buf[0], 0xC2);
+  EXPECT_EQ(buf[1], 0xDC);
+  EXPECT_EQ(buf[2], 0x12);
+  EXPECT_EQ(buf[3], 0x20);
+  EXPECT_EQ(buf[4], 0x2F);
+  EXPECT_EQ(buf[5], 0xE9);
+  EXPECT_EQ(buf[6], 0xC0);
+  EXPECT_EQ(buf[7], 0x00);
+
+  const double unpacked = UnpackBigEndian64<double>(buf);
 
   EXPECT_EQ(unpacked, original);
 }

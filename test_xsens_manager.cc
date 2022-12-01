@@ -6,7 +6,7 @@
 
 #include "xsens_manager.h"
 
-using namespace xbus;
+using namespace xsens;
 
 class FakeXsensManager : public XsensManager {
  public:

@@ -429,6 +429,25 @@ class XsensManager {
     return ConfigResult::kSuccess;
   }
 
+  ConfigResult GetOutputConfiguration(DataOutput *data_list, unsigned int len) {
+    ConfigResponse resp = SendConfig(MsgId::kReqOutputConfiguration);
+    if (resp.result != ConfigResult::kSuccess) return resp.result;
+    if (resp.len > 4 * len || resp.len % 4) return ConfigResult::kErrorLen;
+    const unsigned int num_configs = resp.len / 4;
+
+    for (int i = 0; i < num_configs; ++i) {
+      const uint16_t raw_id = UnpackBigEndian16<uint16_t>(resp.data + 4 * i + 0);
+
+      data_list[i].type = static_cast<DataType>(raw_id & 0xFFF0);
+      data_list[i].precision = static_cast<Precision>(raw_id & 0x03);
+      data_list[i].coordinates = static_cast<CoordinateSystem>(raw_id & 0xC0);
+
+      data_list[i].rate = UnpackBigEndian16<uint16_t>(resp.data + 4 * i + 2);
+    }
+
+    return ConfigResult::kSuccess;
+  }
+
  private:
   static constexpr unsigned int kReadBufLen = 512;
   static constexpr unsigned int kWriteBufLen = 512;

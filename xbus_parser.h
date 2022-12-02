@@ -200,4 +200,9 @@ PackResult PackMsg(uint8_t *buf, unsigned int buf_len, MsgId id, const uint8_t *
   return result;
 }
 
+struct DataResult {
+  DataPacket data;
+  unsigned int bytes_read;
+};
+
 };  // namespace xsens

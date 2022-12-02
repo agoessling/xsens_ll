@@ -1,5 +1,5 @@
-#include <cstdlib>
 #include <bitset>
+#include <cstdlib>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -27,7 +27,10 @@ int main(int argc, char **argv) {
   program.add_argument("-p", "--port").required().help("Serial port.");
   program.add_argument("-b", "--baudrate").scan<'i', int>().required().help("Serial baud rate.");
   program.add_argument("--mti-8").default_value(false).implicit_value(true).help("Test Mti-8.");
-  program.add_argument("--defaults").default_value(false).implicit_value(true).help("Restore to factory defaults.");
+  program.add_argument("--defaults")
+      .default_value(false)
+      .implicit_value(true)
+      .help("Restore to factory defaults.");
 
   try {
     program.parse_args(argc, argv);
@@ -118,11 +121,14 @@ int main(int argc, char **argv) {
   std::cout << "  enable_ahs: " << flags.enable_ahs << std::endl;
   std::cout << "  enable_orientation_smoother: " << flags.enable_orientation_smoother << std::endl;
   std::cout << "  enable_configurable_bus_id: " << flags.enable_configurable_bus_id << std::endl;
-  std::cout << "  enable_inrun_compass_calibration: " << flags.enable_inrun_compass_calibration << std::endl;
+  std::cout << "  enable_inrun_compass_calibration: " << flags.enable_inrun_compass_calibration
+            << std::endl;
   std::cout << "  reserved1: " << flags.reserved1 << std::endl;
-  std::cout << "  enable_config_message_at_startup: " << flags.enable_config_message_at_startup << std::endl;
+  std::cout << "  enable_config_message_at_startup: " << flags.enable_config_message_at_startup
+            << std::endl;
   std::cout << "  reserved2: " << flags.reserved2 << std::endl;
-  std::cout << "  enable_position_velocity_smoother: " << flags.enable_position_velocity_smoother << std::endl;
+  std::cout << "  enable_position_velocity_smoother: " << flags.enable_position_velocity_smoother
+            << std::endl;
   std::cout << "  enable_continuous_zru: " << flags.enable_continuous_zru << std::endl;
   std::cout << "  reserved3: " << flags.reserved3 << std::endl;
 
@@ -186,9 +192,9 @@ int main(int argc, char **argv) {
     std::string label(str, str + len);
     std::cout << label << std::endl;
 
-    //std::cout << "Setting filter profile. " << std::flush;
-    //CheckOrExit(manager->SetFilterProfileClassic(FilterType::kMti8GeneralRtk));
-    //std::cout << std::endl;
+    // std::cout << "Setting filter profile. " << std::flush;
+    // CheckOrExit(manager->SetFilterProfileClassic(FilterType::kMti8GeneralRtk));
+    // std::cout << std::endl;
   }
 
   std::cout << "Get GNSS Platform: " << std::flush;

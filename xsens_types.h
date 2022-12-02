@@ -1,7 +1,7 @@
 #pragma once
 
-#include <cstddef>
 #include <array>
+#include <cstddef>
 
 namespace xsens {
 
@@ -155,8 +155,8 @@ enum class GnssPlatform {
   kPedestrian = 3,
   kAutomotive = 4,
   kAtSea = 5,
-  kAirborneLt1g	= 6,
-  kAirborneLt2g	= 7,
+  kAirborneLt1g = 6,
+  kAirborneLt2g = 7,
   kAirborneLt4g = 8,
   kWrist = 9,
   kBike = 10,

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <optional>
+
 #include "xbus_parser.h"
 
 namespace xsens {
@@ -58,35 +60,44 @@ struct Output {
   uint16_t rate;
 };
 
-// Base types.
-using Float32 = float;
-using Fp1220 = uint32_t;
-using Fp1632 = uint64_t;
-using Float64 = double;
-using U1 = uint8_t;
-using U2 = uint16_t;
-using U4 = uint32_t;
-using I1 = int8_t;
-using I2 = int16_t;
-using I4 = int32_t;
+struct Float32 {
+  using type = float;
+  static constexpr Precision id = Precision::kFloat32;
+};
 
-using RealScalar = std::variant<Float32, Fp1220, Fp1632, Float64>;
+struct Fp1220 {
+  using type = uint32_t;
+  static constexpr Precision id = Precision::kFp1220;
+};
 
-template <template<typename> typename T>
-using RealStruct = std::variant<T<Float32>, T<Fp1220>, T<Fp1632>, T<Float64>>;
+struct Fp1632 {
+  using type = uint64_t;
+  static constexpr Precision id = Precision::kFp1632;
+};
+
+struct Float64 {
+  using type = double;
+  static constexpr Precision id = Precision::kFloat64;
+};
+
+static constexpr uint16_t GetDataId(Type data_id, Precision precision_id,
+                                    CoordinateSystem coords_id = kEnu) {
+  return (static_cast<uint16_t>(data_id) | static_cast<uint16_t>(precision_id) |
+          static_cast<uint16_t>(coords_id));
+}
 
 // Scalar Data Types.
-using Temperature = struct { RealScalar val; };
-using PacketCounter = struct { U2 val; };
-using SampleTimeFine = struct { U4 val; };
-using SampleTimeCoarse = struct { U4 val; };
-using BaroPressure = struct { U4 val; };
-using GnssPvtPulse = struct { U4 val; };
-using StatusByte = struct { U1 val; };
-using StatusWord = struct { U4 val; };
-using DeviceId = struct { std::variant<U4, U8> val; };
-using LocationId = struct { U2 val; };
-using AltitudeEllipsoid = struct { RealScalar val; };
+using Temperature = struct {};
+using PacketCounter = struct { uint16_t val; };
+using SampleTimeFine = struct { uint32_t val; };
+using SampleTimeCoarse = struct { uint32_t val; };
+using BaroPressure = struct { uint32_t val; };
+using GnssPvtPulse = struct { uint32_t val; };
+using StatusByte = struct { uint8_t val; };
+using StatusWord = struct { uint32_t val; };
+using DeviceId = struct {};
+using LocationId = struct { uint16_t val; };
+using AltitudeEllipsoid = struct {};
 
 // Struct Data Types.
 struct UtcTime {
@@ -99,160 +110,139 @@ struct UtcTime {
   uint8_t flags;
 };
 
-template <typename T>
-struct RealQuaternion {
-  T w;
-  T x;
-  T y;
-  T z;
+template <typename Precision, CoordinateSystem coords>
+struct Quaternion {
+  static constexpr uint16_t id = GetDataId(Type::kQuaternion, Precision::id, coords);
+  typename Precision::type w;
+  typename Precision::type x;
+  typename Precision::type y;
+  typename Precision::type z;
 };
-using Quaternion = RealStruct<RealQuaternion>;
-
-template <typename T>
-struct RealEulerAngles {
-  T roll;
-  T pitch;
-  T yaw;
-};
-using EulerAngles = RealStruct<RealEulerAngles>;
-
-template <typename T>
-struct RealRotationMatrix {
-  T a;
-  T b;
-  T c;
-  T d;
-  T e;
-  T f;
-  T g;
-  T h;
-  T i;
-};
-using RotationMatrix = RealStruct<RealRotationMatrix>;
-
-template <typename T>
-struct RealDeltaV {
-  T x;
-  T y;
-  T z;
-};
-using DeltaV = RealStruct<RealDeltaV>;
-
-template <typename T>
-struct RealDeltaQ {
-  T w;
-  T x;
-  T y;
-  T z;
-};
-using DeltaQ = RealStruct<RealDeltaQ>;
-
-template <typename T>
-struct RealAcceleration {
-  T x;
-  T y;
-  T z;
-};
-using Acceleration = RealStruct<RealAcceleration>;
-
-template <typename T>
-struct RealFreeAcceleration {
-  T x;
-  T y;
-  T z;
-};
-using FreeAcceleration = RealStruct<RealFreeAcceleration>;
-
-template <typename T>
-struct RealAccelerationHr {
-  T x;
-  T y;
-  T z;
-};
-using AccelerationHr = RealStruct<RealAccelerationHr>;
-
-template <typename T>
-struct RealRateOfTurn {
-  T x;
-  T y;
-  T z;
-};
-using RateOfTurn = RealStruct<RealRateOfTurn>;
-
-template <typename T>
-struct RealRateOfTurnHr {
-  T x;
-  T y;
-  T z;
-};
-using RateOfTurnHr = RealStruct<RealRateOfTurnHr>;
+//
+// struct RealEulerAngles {
+//  T roll;
+//  T pitch;
+//  T yaw;
+//};
+//
+// struct RealRotationMatrix {
+//  T a;
+//  T b;
+//  T c;
+//  T d;
+//  T e;
+//  T f;
+//  T g;
+//  T h;
+//  T i;
+//};
+//
+// struct RealDeltaV {
+//  T x;
+//  T y;
+//  T z;
+//};
+//
+// struct RealDeltaQ {
+//  T w;
+//  T x;
+//  T y;
+//  T z;
+//};
+//
+// struct RealAcceleration {
+//  T x;
+//  T y;
+//  T z;
+//};
+//
+// struct RealFreeAcceleration {
+//  T x;
+//  T y;
+//  T z;
+//};
+//
+// struct RealAccelerationHr {
+//  T x;
+//  T y;
+//  T z;
+//};
+//
+// struct RealRateOfTurn {
+//  T x;
+//  T y;
+//  T z;
+//};
+//
+// struct RealRateOfTurnHr {
+//  T x;
+//  T y;
+//  T z;
+//};
 
 struct GnssPvtData {
-  U4 itow;
-  U2 year;
-  U1 month;
-  U1 day;
-  U1 hour;
-  U1 min;
-  U1 sec;
-  U1 valid;
-  U4 t_acc;
-  I4 nano;
-  U1 fix_type;
-  U1 flags;
-  U1 num_sv;
-  I4 lon;
-  I4 lat;
-  I4 height;
-  I4 h_msl;
-  U4 h_acc;
-  U4 v_acc;
-  I4 vel_n;
-  I4 vel_e;
-  I4 vel_d;
-  I4 g_speed;
-  I4 head_mot;
-  U4 s_acc;
-  U4 head_acc;
-  I4 head_veh;
-  U2 gdop;
-  U2 pdop;
-  U2 tdop;
-  U2 vdop;
-  U2 hdop;
-  U2 ndop;
-  U2 edop;
+  uint32_t itow;
+  uint16_t year;
+  uint8_t month;
+  uint8_t day;
+  uint8_t hour;
+  uint8_t min;
+  uint8_t sec;
+  uint8_t valid;
+  uint32_t t_acc;
+  int32_t nano;
+  uint8_t fix_type;
+  uint8_t flags;
+  uint8_t num_sv;
+  int32_t lon;
+  int32_t lat;
+  int32_t height;
+  int32_t h_msl;
+  uint32_t h_acc;
+  uint32_t v_acc;
+  int32_t vel_n;
+  int32_t vel_e;
+  int32_t vel_d;
+  int32_t g_speed;
+  int32_t head_mot;
+  uint32_t s_acc;
+  uint32_t head_acc;
+  int32_t head_veh;
+  uint16_t gdop;
+  uint16_t pdop;
+  uint16_t tdop;
+  uint16_t vdop;
+  uint16_t hdop;
+  uint16_t ndop;
+  uint16_t edop;
 };
 
 struct GnssSatData {
-  U1 gnss_id;
-  U1 sv_id;
-  U1 cno;
-  U1 flags;
+  uint8_t gnss_id;
+  uint8_t sv_id;
+  uint8_t cno;
+  uint8_t flags;
 };
 
 struct GnssSatInfo {
-  U4 itow;
-  U1 num_svs;
+  uint32_t itow;
+  uint8_t num_svs;
   GnssSateData sat_data[64]
 };
 
-struct RawAccGyrMagTemp
-struct RawGyroTemp
-struct MagneticField
-struct PositionEcef
-struct LatLon
-struct VelocityXYZ
-
-
-using DataType = std::variant<Temperature, AltitudeEllipsoid, SampleTimeCoarse, UtcTime, Quaternion>;
+struct RawAccGyrMagTemp {};
+struct RawGyroTemp {};
+struct MagneticField {};
+struct PositionEcef {};
+struct LatLon {};
+struct VelocityXYZ {};
 
 struct DataPacket {
   const uint8_t *data;
   uint8_t len;
 };
 
-static inline std::optional<DataPacket> FindDataPacket(uint16_t id, const uint8_t *buf, unsigned int len) {
+std::optional<DataPacket> FindDataPacket(uint16_t id, const uint8_t *buf, unsigned int len) {
   unsigned int index = 0;
   while (index < len - 2) {
     const uint16_t packet_id = UnpackBigEndian16<uint16_t>(&buf[index + 0]);
@@ -263,7 +253,7 @@ static inline std::optional<DataPacket> FindDataPacket(uint16_t id, const uint8_
       // Buffer ends before end of data packet.
       if (packet_len + index + 3 > len) return std::nullopt;
 
-      return { .data = packet_data, .len = packet_len };
+      return {.data = packet_data, .len = packet_len};
     }
     index += 3 + packet_len;
   }

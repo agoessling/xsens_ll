@@ -1,8 +1,8 @@
 #pragma once
 
+#include <algorithm>
 #include <cstdint>
 #include <cstring>
-#include <algorithm>
 
 #include "msg_id.h"
 #include "xbus_parser.h"
@@ -274,21 +274,13 @@ class XsensManager {
     return resp.result;
   }
 
-  ConfigResult GetSensorAlignment(Quaternionf& quat) {
-    return GetAlignment(quat, 0);
-  }
+  ConfigResult GetSensorAlignment(Quaternionf& quat) { return GetAlignment(quat, 0); }
 
-  ConfigResult GetLocalAlignment(Quaternionf& quat) {
-    return GetAlignment(quat, 1);
-  }
+  ConfigResult GetLocalAlignment(Quaternionf& quat) { return GetAlignment(quat, 1); }
 
-  ConfigResult SetSensorAlignment(const Quaternionf& quat) {
-    return SetAlignment(quat, 0);
-  }
+  ConfigResult SetSensorAlignment(const Quaternionf& quat) { return SetAlignment(quat, 0); }
 
-  ConfigResult SetLocalAlignment(const Quaternionf& quat) {
-    return SetAlignment(quat, 1);
-  }
+  ConfigResult SetLocalAlignment(const Quaternionf& quat) { return SetAlignment(quat, 1); }
 
   ConfigResult GetFilterProfileClassic(FilterType& type) {
     ConfigResponse resp = SendConfig(MsgId::kReqFilterProfile);
@@ -301,7 +293,7 @@ class XsensManager {
     return ConfigResult::kSuccess;
   }
 
-  ConfigResult GetAvailableFilterProfileClassic(FilterProfile (& profile)[5]) {
+  ConfigResult GetAvailableFilterProfileClassic(FilterProfile (&profile)[5]) {
     ConfigResponse resp = SendConfig(MsgId::kReqAvailableFilterProfiles);
 
     if (resp.result != ConfigResult::kSuccess) return resp.result;

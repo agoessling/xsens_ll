@@ -53,6 +53,24 @@ TEST(Pack, BigEndian32Float) {
   EXPECT_EQ(unpacked, original);
 }
 
+TEST(Pack, BigEndian48) {
+  const int64_t original = -12345678901;
+
+  uint8_t buf[6];
+  PackBigEndian48(original, buf);
+
+  EXPECT_EQ(buf[0], 0xFF);
+  EXPECT_EQ(buf[1], 0xFD);
+  EXPECT_EQ(buf[2], 0x20);
+  EXPECT_EQ(buf[3], 0x23);
+  EXPECT_EQ(buf[4], 0xE3);
+  EXPECT_EQ(buf[5], 0xCB);
+
+  const int64_t unpacked = UnpackBigEndian48<int64_t>(buf);
+
+  EXPECT_EQ(unpacked, original);
+}
+
 TEST(Pack, BigEndian64) {
   const int64_t original = -12345678901;
 

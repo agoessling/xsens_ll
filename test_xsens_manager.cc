@@ -10,7 +10,7 @@ using namespace xsens;
 
 class FakeXsensManager : public XsensManager {
  public:
-  FakeXsensManager() { Reset(); }
+  FakeXsensManager() : XsensManager(100'000) { Reset(); }
 
   void Reset() {
     epoch_time_us_ = 0;
@@ -69,6 +69,11 @@ class FakeXsensManager : public XsensManager {
     }
 
     return len;
+  }
+
+  int FlushBytes() {
+    read_data_.clear();
+    return 0;
   }
 
   uint64_t EpochTimeUs() override final { return epoch_time_us_; }

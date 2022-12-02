@@ -28,8 +28,7 @@ struct ParsedMsg {
 template <typename T>
 T UnpackBigEndian16(const uint8_t *buf) {
   static_assert(sizeof(T) == 2);
-  uint16_t raw_val = (static_cast<uint16_t>(buf[0]) << 8) |
-                     (static_cast<uint16_t>(buf[1]) << 0);
+  uint16_t raw_val = (static_cast<uint16_t>(buf[0]) << 8) | (static_cast<uint16_t>(buf[1]) << 0);
   return reinterpret_cast<T&>(raw_val);
 }
 
@@ -39,6 +38,20 @@ T UnpackBigEndian32(const uint8_t *buf) {
   uint32_t raw_val = (static_cast<uint32_t>(buf[0]) << 24) | (static_cast<uint32_t>(buf[1]) << 16) |
                      (static_cast<uint32_t>(buf[2]) << 8) | (static_cast<uint32_t>(buf[3]) << 0);
   return reinterpret_cast<T&>(raw_val);
+}
+
+template <typename T>
+T UnpackBigEndian48(const uint8_t *buf) {
+  static_assert(sizeof(T) == 8);
+  uint64_t raw_val = (static_cast<uint64_t>(buf[0]) << 40) | (static_cast<uint64_t>(buf[1]) << 32) |
+                     (static_cast<uint64_t>(buf[2]) << 24) | (static_cast<uint64_t>(buf[3]) << 16) |
+                     (static_cast<uint64_t>(buf[4]) << 8) | (static_cast<uint64_t>(buf[5]) << 0);
+  T data = reinterpret_cast<T&>(raw_val);
+
+  // Extend sign.
+  data = (data << 16) >> 16;
+
+  return data;
 }
 
 template <typename T>
@@ -67,6 +80,18 @@ void PackBigEndian32(T data, uint8_t *buf) {
   buf[1] = static_cast<uint8_t>(raw_data >> 16);
   buf[2] = static_cast<uint8_t>(raw_data >> 8);
   buf[3] = static_cast<uint8_t>(raw_data >> 0);
+}
+
+template <typename T>
+void PackBigEndian48(T data, uint8_t *buf) {
+  static_assert(sizeof(data) == 8);
+  const uint64_t raw_data = reinterpret_cast<uint64_t&>(data);
+  buf[0] = static_cast<uint8_t>(raw_data >> 40);
+  buf[1] = static_cast<uint8_t>(raw_data >> 32);
+  buf[2] = static_cast<uint8_t>(raw_data >> 24);
+  buf[3] = static_cast<uint8_t>(raw_data >> 16);
+  buf[4] = static_cast<uint8_t>(raw_data >> 8);
+  buf[5] = static_cast<uint8_t>(raw_data >> 0);
 }
 
 template <typename T>

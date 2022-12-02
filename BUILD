@@ -33,6 +33,12 @@ cc_library(
 )
 
 cc_library(
+    name = "bitfield",
+    hdrs = ["bitfield.h"],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
     name = "xsens_types",
     hdrs = ["xsens_types.h"],
     visibility = ["//visibility:public"],
@@ -44,6 +50,16 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":msg_id",
+    ],
+)
+
+cc_library(
+    name = "data_packet",
+    hdrs = ["data_packet.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":bitfield",
+        ":xbus_parser",
     ],
 )
 
@@ -78,6 +94,17 @@ cc_test(
 )
 
 cc_test(
+    name = "test_data_packet",
+    srcs = ["test_data_packet.cc"],
+    deps = [
+        ":bitfield",
+        ":data_packet",
+        "@gtest",
+        "@gtest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "test_xsens_manager",
     srcs = ["test_xsens_manager.cc"],
     deps = [
@@ -91,6 +118,7 @@ cc_binary(
     name = "test_linux_xsens_manager",
     srcs = ["test_linux_xsens_manager.cc"],
     deps = [
+        ":data_packet",
         ":linux_xsens_manager",
         "@argparse",
     ],

@@ -1,8 +1,8 @@
 #pragma once
 
+#include <algorithm>
 #include <cstdint>
 #include <cstring>
-#include <algorithm>
 
 #include "msg_id.h"
 #include "xbus_parser.h"
@@ -274,21 +274,13 @@ class XsensManager {
     return resp.result;
   }
 
-  ConfigResult GetSensorAlignment(Quaternionf& quat) {
-    return GetAlignment(quat, 0);
-  }
+  ConfigResult GetSensorAlignment(Quaternionf& quat) { return GetAlignment(quat, 0); }
 
-  ConfigResult GetLocalAlignment(Quaternionf& quat) {
-    return GetAlignment(quat, 1);
-  }
+  ConfigResult GetLocalAlignment(Quaternionf& quat) { return GetAlignment(quat, 1); }
 
-  ConfigResult SetSensorAlignment(const Quaternionf& quat) {
-    return SetAlignment(quat, 0);
-  }
+  ConfigResult SetSensorAlignment(const Quaternionf& quat) { return SetAlignment(quat, 0); }
 
-  ConfigResult SetLocalAlignment(const Quaternionf& quat) {
-    return SetAlignment(quat, 1);
-  }
+  ConfigResult SetLocalAlignment(const Quaternionf& quat) { return SetAlignment(quat, 1); }
 
   ConfigResult GetFilterProfileClassic(FilterType& type) {
     ConfigResponse resp = SendConfig(MsgId::kReqFilterProfile);
@@ -301,7 +293,7 @@ class XsensManager {
     return ConfigResult::kSuccess;
   }
 
-  ConfigResult GetAvailableFilterProfileClassic(FilterProfile (& profile)[5]) {
+  ConfigResult GetAvailableFilterProfileClassic(FilterProfile (&profile)[5]) {
     ConfigResponse resp = SendConfig(MsgId::kReqAvailableFilterProfiles);
 
     if (resp.result != ConfigResult::kSuccess) return resp.result;
@@ -427,6 +419,32 @@ class XsensManager {
     rev.scm_reference = UnpackBigEndian32<uint32_t>(resp.data + 7);
 
     return ConfigResult::kSuccess;
+  }
+
+  ConfigResult GetOutputConfiguration(OutputConfig *configs, unsigned int len) {
+    ConfigResponse resp = SendConfig(MsgId::kReqOutputConfiguration);
+    if (resp.result != ConfigResult::kSuccess) return resp.result;
+    if (resp.len > 4 * len || resp.len % 4) return ConfigResult::kErrorLen;
+    const unsigned int num_configs = resp.len / 4;
+
+    for (unsigned int i = 0; i < num_configs; ++i) {
+      configs[i].type_id = UnpackBigEndian16<uint16_t>(resp.data + 4 * i + 0);
+      configs[i].rate = UnpackBigEndian16<uint16_t>(resp.data + 4 * i + 2);
+    }
+
+    return ConfigResult::kSuccess;
+  }
+
+  ConfigResult SetOutputConfiguration(const OutputConfig *config, unsigned int len) {
+    if (len > 32) return ConfigResult::kErrorLen;
+
+    uint8_t data[32 * 4];
+    for (unsigned int i = 0; i < len; ++i) {
+      PackBigEndian16(config[i].type_id, data + 4 * i + 0);
+      PackBigEndian16(config[i].rate, data + 4 * i + 2);
+    }
+
+    return SendConfig(MsgId::kSetOutputConfiguration, data, 4 * len).result;
   }
 
  private:

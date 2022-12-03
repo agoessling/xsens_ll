@@ -6,11 +6,13 @@
 
 #include <argparse.hpp>
 
+#include "data_packet.h"
 #include "linux_xsens_manager.h"
 #include "xsens_types.h"
 
 using namespace xsens;
 using namespace xsens::linux;
+using namespace xsens::data;
 
 static inline void CheckOrExit(const XsensManager::ConfigResult& result) {
   if (result != XsensManager::ConfigResult::kSuccess) {
@@ -23,6 +25,34 @@ static inline void CheckOrExit(const XsensManager::ConfigResult& result) {
 static constexpr BaudRate kNewBaud = BaudRate::k921600;
 
 int main(int argc, char **argv) {
+  uint8_t buf[] = {
+      0x20, 0x18, 0x10, 0x3F, 0x9D, 0x70, 0xA4, 0x3F, 0x9D, 0x70, 0xA4,
+      0x3F, 0x9D, 0x70, 0xA4, 0x3F, 0x9D, 0x70, 0xA4,  // Quaternion
+      0x08, 0x13, 0x08, 0xC2, 0xDC, 0x12, 0x20, 0x2F, 0xE9, 0xC0, 0x00  // Temperature
+  };
+  {
+    auto data = GetData<Quaternion<Float32, Nwu>>(buf, sizeof(buf));
+    if (data)
+      std::cout << "Success! " << data->w << data->x << data->y << data->z << std::endl;
+    else
+      std::cout << "Failure" << std::endl;
+  }
+  {
+    auto data = GetData<Temperature<Float64>>(buf, sizeof(buf));
+    if (data)
+      std::cout << "Success! " << data->val << std::endl;
+    else
+      std::cout << "Failure" << std::endl;
+  }
+  {
+    auto data = GetData<PacketCounter>(buf, sizeof(buf));
+    if (data)
+      std::cout << "Success!" << std::endl;
+    else
+      std::cout << "Failure" << std::endl;
+  }
+  return 0;
+
   argparse::ArgumentParser program("test_linux_xsens_manager");
   program.add_argument("-p", "--port").required().help("Serial port.");
   program.add_argument("-b", "--baudrate").scan<'i', int>().required().help("Serial baud rate.");

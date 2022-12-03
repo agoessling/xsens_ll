@@ -48,6 +48,15 @@ cc_library(
 )
 
 cc_library(
+    name = "data_packet",
+    hdrs = ["data_packet.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":xbus_parser",
+    ],
+)
+
+cc_library(
     name = "xsens_manager",
     hdrs = ["xsens_manager.h"],
     visibility = ["//visibility:public"],
@@ -91,6 +100,7 @@ cc_binary(
     name = "test_linux_xsens_manager",
     srcs = ["test_linux_xsens_manager.cc"],
     deps = [
+        ":data_packet",
         ":linux_xsens_manager",
         "@argparse",
     ],

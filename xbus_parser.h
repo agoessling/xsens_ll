@@ -1,9 +1,29 @@
+#pragma once
+
 #include <cstdint>
-#include <iostream>
-#include <optional>
+
+#include "msg_id.h"
 
 namespace xsens {
-namespace data {
+
+static constexpr int kMaxMsgOverhead = 7;  // Maximum bytes of overhead.
+static constexpr uint8_t kPreambleVal = 0xFA;
+static constexpr uint8_t kBidVal = 0xFF;
+
+enum class ParseError {
+  kNone,  // No error
+  kPreamble,  // Incorrect preamble
+  kBid,  // Incorrect BID
+  kLen,  // Insufficient length
+  kChecksum,  // Incorrect checksum
+};
+
+struct ParsedMsg {
+  ParseError error;
+  MsgId id;
+  unsigned int len;
+  const uint8_t *data;
+};
 
 template <typename T>
 T UnpackBigEndian16(const uint8_t *buf) {
@@ -12,303 +32,192 @@ T UnpackBigEndian16(const uint8_t *buf) {
   return reinterpret_cast<T&>(raw_val);
 }
 
-enum class Type {
-  kTemperature = 0x0810,  // [°C] Temperature
-  kUtcTime = 0x1010,  // [] UTC Time
-  kPacketCounter = 0x1020,  // [] Packet Counter
-  kSampleTimeFine = 0x1060,  // [] Sample Time Fine
-  kSampleTimeCoarse = 0x1070,  // [s] Sample Time Coarse
-  kQuaternion = 0x2010,  // [] Quaternion
-  kRotationMatrix = 0x2020,  // [] Rotation Matrix
-  kEulerAngles = 0x2030,  // [deg] Euler Angles
-  kBaroPressure = 0x3010,  // [Pa] Baro Pressure
-  kDeltaV = 0x4010,  // [m/s] Delta V
-  kAcceleration = 0x4020,  // [m/s2] Acceleration
-  kFreeAcceleration = 0x4030,  // [m/s2] Free Acceleration
-  kAccelerationHR = 0x4040,  // [m/s2] AccelerationHR
-  kAltitudeEllipsoid = 0x5020,  // [m] Altitude Ellipsoid
-  kPositionEcef = 0x5030,  // [m] Position ECEF
-  kLatLon = 0x5040,  // [deg] LatLon
-  kGnssPvtData = 0x7010,  // [] GNSS PVT data
-  kGnssSatInfo = 0x7020,  // [] GNSS satellites info
-  kGnssPvtPulse = 0x7030,  // [s] GNSS PVT pulse
-  kRateOfTurn = 0x8020,  // [rad/s] Rate of Turn
-  kDeltaQ = 0x8030,  // [] Delta Q
-  kRateOfTurnHR = 0x8040,  // [rad/s] RateOfTurnHR
-  kRawAccGyrMagTemp = 0xA010,  // [] ACC, GYR, MAG, temperature
-  kRawGyroTemp = 0xA020,  // [°C] Gyro temperatures
-  kMagneticField = 0xC020,  // [a.u.] Magnetic Field
-  kVelocityXYZ = 0xD010,  // [m/s] Velocity XYZ
-  kStatusByte = 0xE010,  // [] Status Byte
-  kStatusWord = 0xE020,  // [] Status Word
-  kDeviceId = 0xE080,  // [] Device ID
-  kLocationId = 0xE090,  // [] Location ID
-};
-
-enum class Precision {
-  kFloat32 = 0x00,
-  kFp1220 = 0x01,
-  kFp1632 = 0x02,
-  kFloat64 = 0x03,
-};
-
-enum class CoordinateSystem {
-  kEnu = 0x00,
-  kNed = 0x04,
-  kNwu = 0x08,
-};
-
-struct Output {
-  Type type;
-  Precision precision;
-  CoordinateSystem coordinates;
-  uint16_t rate;
-};
-
-struct Float32 {
-  using type = float;
-  static constexpr Precision id = Precision::kFloat32;
-};
-
-struct Fp1220 {
-  using type = uint32_t;
-  static constexpr Precision id = Precision::kFp1220;
-};
-
-struct Fp1632 {
-  using type = uint64_t;
-  static constexpr Precision id = Precision::kFp1632;
-};
-
-struct Float64 {
-  using type = double;
-  static constexpr Precision id = Precision::kFloat64;
-};
-
-static constexpr uint16_t GetDataId(Type data_id, Precision precision_id,
-                                    CoordinateSystem coords_id = CoordinateSystem::kEnu) {
-  return (static_cast<uint16_t>(data_id) | static_cast<uint16_t>(precision_id) |
-          static_cast<uint16_t>(coords_id));
+template <typename T>
+T UnpackBigEndian32(const uint8_t *buf) {
+  static_assert(sizeof(T) == 4);
+  uint32_t raw_val = (static_cast<uint32_t>(buf[0]) << 24) | (static_cast<uint32_t>(buf[1]) << 16) |
+                     (static_cast<uint32_t>(buf[2]) << 8) | (static_cast<uint32_t>(buf[3]) << 0);
+  return reinterpret_cast<T&>(raw_val);
 }
 
-// Scalar Data Types.
-using Temperature = struct {};
-using PacketCounter = struct { uint16_t val; };
-using SampleTimeFine = struct { uint32_t val; };
-using SampleTimeCoarse = struct { uint32_t val; };
-using BaroPressure = struct { uint32_t val; };
-using GnssPvtPulse = struct { uint32_t val; };
-using StatusByte = struct { uint8_t val; };
-using StatusWord = struct { uint32_t val; };
-using DeviceId = struct {};
-using LocationId = struct { uint16_t val; };
-using AltitudeEllipsoid = struct {};
+template <typename T>
+T UnpackBigEndian48(const uint8_t *buf) {
+  static_assert(sizeof(T) == 8);
+  uint64_t raw_val = (static_cast<uint64_t>(buf[0]) << 40) | (static_cast<uint64_t>(buf[1]) << 32) |
+                     (static_cast<uint64_t>(buf[2]) << 24) | (static_cast<uint64_t>(buf[3]) << 16) |
+                     (static_cast<uint64_t>(buf[4]) << 8) | (static_cast<uint64_t>(buf[5]) << 0);
+  return reinterpret_cast<T&>(raw_val);
+}
 
-// Struct Data Types.
-struct UtcTime {
-  uint32_t ns;
-  uint16_t year;
-  uint8_t month;
-  uint8_t hour;
-  uint8_t minute;
-  uint8_t second;
-  uint8_t flags;
-};
+template <typename T>
+T UnpackBigEndian64(const uint8_t *buf) {
+  static_assert(sizeof(T) == 8);
+  uint64_t raw_val = (static_cast<uint64_t>(buf[0]) << 56) | (static_cast<uint64_t>(buf[1]) << 48) |
+                     (static_cast<uint64_t>(buf[2]) << 40) | (static_cast<uint64_t>(buf[3]) << 32) |
+                     (static_cast<uint64_t>(buf[4]) << 24) | (static_cast<uint64_t>(buf[5]) << 16) |
+                     (static_cast<uint64_t>(buf[6]) << 8) | (static_cast<uint64_t>(buf[7]) << 0);
+  return reinterpret_cast<T&>(raw_val);
+}
 
-template <typename Precision, CoordinateSystem coords>
-struct Quaternion {
-  static constexpr uint16_t id = GetDataId(Type::kQuaternion, Precision::id, coords);
-  typename Precision::type w;
-  typename Precision::type x;
-  typename Precision::type y;
-  typename Precision::type z;
-};
-//
-// struct RealEulerAngles {
-//  T roll;
-//  T pitch;
-//  T yaw;
-//};
-//
-// struct RealRotationMatrix {
-//  T a;
-//  T b;
-//  T c;
-//  T d;
-//  T e;
-//  T f;
-//  T g;
-//  T h;
-//  T i;
-//};
-//
-// struct RealDeltaV {
-//  T x;
-//  T y;
-//  T z;
-//};
-//
-// struct RealDeltaQ {
-//  T w;
-//  T x;
-//  T y;
-//  T z;
-//};
-//
-// struct RealAcceleration {
-//  T x;
-//  T y;
-//  T z;
-//};
-//
-// struct RealFreeAcceleration {
-//  T x;
-//  T y;
-//  T z;
-//};
-//
-// struct RealAccelerationHr {
-//  T x;
-//  T y;
-//  T z;
-//};
-//
-// struct RealRateOfTurn {
-//  T x;
-//  T y;
-//  T z;
-//};
-//
-// struct RealRateOfTurnHr {
-//  T x;
-//  T y;
-//  T z;
-//};
+template <typename T>
+void PackBigEndian16(T data, uint8_t *buf) {
+  static_assert(sizeof(data) == 2);
+  const uint16_t raw_data = reinterpret_cast<uint16_t&>(data);
+  buf[0] = static_cast<uint8_t>(raw_data >> 8);
+  buf[1] = static_cast<uint8_t>(raw_data >> 0);
+}
 
-struct GnssPvtData {
-  uint32_t itow;
-  uint16_t year;
-  uint8_t month;
-  uint8_t day;
-  uint8_t hour;
-  uint8_t min;
-  uint8_t sec;
-  uint8_t valid;
-  uint32_t t_acc;
-  int32_t nano;
-  uint8_t fix_type;
-  uint8_t flags;
-  uint8_t num_sv;
-  int32_t lon;
-  int32_t lat;
-  int32_t height;
-  int32_t h_msl;
-  uint32_t h_acc;
-  uint32_t v_acc;
-  int32_t vel_n;
-  int32_t vel_e;
-  int32_t vel_d;
-  int32_t g_speed;
-  int32_t head_mot;
-  uint32_t s_acc;
-  uint32_t head_acc;
-  int32_t head_veh;
-  uint16_t gdop;
-  uint16_t pdop;
-  uint16_t tdop;
-  uint16_t vdop;
-  uint16_t hdop;
-  uint16_t ndop;
-  uint16_t edop;
-};
+template <typename T>
+void PackBigEndian32(T data, uint8_t *buf) {
+  static_assert(sizeof(data) == 4);
+  const uint32_t raw_data = reinterpret_cast<uint32_t&>(data);
+  buf[0] = static_cast<uint8_t>(raw_data >> 24);
+  buf[1] = static_cast<uint8_t>(raw_data >> 16);
+  buf[2] = static_cast<uint8_t>(raw_data >> 8);
+  buf[3] = static_cast<uint8_t>(raw_data >> 0);
+}
 
-struct GnssSatData {
-  uint8_t gnss_id;
-  uint8_t sv_id;
-  uint8_t cno;
-  uint8_t flags;
-};
+template <typename T>
+void PackBigEndian48(T data, uint8_t *buf) {
+  static_assert(sizeof(data) == 8);
+  const uint64_t raw_data = reinterpret_cast<uint64_t&>(data);
+  buf[0] = static_cast<uint8_t>(raw_data >> 40);
+  buf[1] = static_cast<uint8_t>(raw_data >> 32);
+  buf[2] = static_cast<uint8_t>(raw_data >> 24);
+  buf[3] = static_cast<uint8_t>(raw_data >> 16);
+  buf[4] = static_cast<uint8_t>(raw_data >> 8);
+  buf[5] = static_cast<uint8_t>(raw_data >> 0);
+}
 
-struct GnssSatInfo {
-  uint32_t itow;
-  uint8_t num_svs;
-  GnssSatData sat_data[64];
-};
+template <typename T>
+void PackBigEndian64(T data, uint8_t *buf) {
+  static_assert(sizeof(data) == 8);
+  const uint64_t raw_data = reinterpret_cast<uint64_t&>(data);
+  buf[0] = static_cast<uint8_t>(raw_data >> 56);
+  buf[1] = static_cast<uint8_t>(raw_data >> 48);
+  buf[2] = static_cast<uint8_t>(raw_data >> 40);
+  buf[3] = static_cast<uint8_t>(raw_data >> 32);
+  buf[4] = static_cast<uint8_t>(raw_data >> 24);
+  buf[5] = static_cast<uint8_t>(raw_data >> 16);
+  buf[6] = static_cast<uint8_t>(raw_data >> 8);
+  buf[7] = static_cast<uint8_t>(raw_data >> 0);
+}
 
-struct RawAccGyrMagTemp {};
-struct RawGyroTemp {};
-struct MagneticField {};
-struct PositionEcef {};
-struct LatLon {};
-struct VelocityXYZ {};
+ParsedMsg ParseMsg(const uint8_t *buf, unsigned int len) {
+  ParsedMsg msg = {.len = 0, .data = nullptr};
 
-struct DataPacket {
-  const uint8_t *data;
-  uint8_t len;
-};
+  // Minimum message length.
+  if (len < 5) {
+    msg.error = ParseError::kLen;
+    return msg;
+  }
 
-std::optional<DataPacket> FindDataPacket(uint16_t id, const uint8_t *buf, unsigned int len) {
-  std::cout << std::hex << std::showbase << id << std::endl;
-  unsigned int index = 0;
-  while (index < len - 2) {
-    const uint16_t packet_id = UnpackBigEndian16<uint16_t>(&buf[index + 0]);
-    const uint8_t packet_len = buf[index + 2];
-    const uint8_t *const packet_data = &buf[index + 3];
+  if (buf[0] != kPreambleVal) {
+    msg.error = ParseError::kPreamble;
+    return msg;
+  }
 
-    if (packet_id == id) {
-      // Buffer ends before end of data packet.
-      if (packet_len + index + 3 > len) return std::nullopt;
+  if (buf[1] != kBidVal) {
+    msg.error = ParseError::kBid;
+    return msg;
+  }
 
-      return DataPacket{.data = packet_data, .len = packet_len};
+  msg.id = static_cast<MsgId>(buf[2]);
+
+  unsigned int header_len = 4;
+
+  // Extended length message.
+  if (buf[3] == 0xFF) {
+    header_len = 6;
+
+    if (len < 7) {
+      msg.error = ParseError::kLen;
+      return msg;
     }
-    index += 3 + packet_len;
-  }
-  return std::nullopt;
-}
 
-template <typename T>
-std::optional<DataPacket> GetDataPacket(const uint8_t *buf, unsigned int len) {
-  return FindDataPacket(T::id, buf, len);
-}
-
-// template <typename T>
-// std::optional<T> UnpackData(const uint8_t *buf, unsigned int len) {
-//     std::cout << "base" << std::endl;
-//     return std::nullopt;
-// }
-
-template <typename T>
-struct type {};
-
-template <typename Precision, CoordinateSystem coords>
-void UnpackData(std::optional<Quaternion<Precision, coords>>& data, const uint8_t *buf,
-                unsigned int len) {
-  std::cout << "special" << std::endl;
-  data = std::nullopt;
-}
-
-template <typename T>
-std::optional<T> GetData(const uint8_t *buf, unsigned int len) {
-  std::optional<DataPacket> pkt = GetDataPacket<T>(buf, len);
-  if (!pkt) return std::nullopt;
-  std::optional<T> data;
-  UnpackData(data, buf, len);
-  return data;
-}
-
-};  // namespace data
-};  // namespace xsens
-
-using namespace xsens::data;
-
-int main() {
-  uint8_t buf[] = {0x20, 0x1B, 0x03, 0x00, 0x01, 0x02};
-  auto data = GetData<Quaternion<Float64, CoordinateSystem::kNwu>>(buf, sizeof(buf));
-  if (data) {
-    std::cout << "Success!" << std::endl;
-    std::cout << data->w << std::endl;
+    msg.len = UnpackBigEndian16<uint16_t>(&buf[4]);
   } else {
-    std::cout << "Failure" << std::endl;
+    msg.len = buf[3];
   }
-  return 0;
+
+  const unsigned int total_msg_len = header_len + msg.len + 1;
+
+  // Check total message length.
+  if (len < total_msg_len) {
+    msg.error = ParseError::kLen;
+    return msg;
+  }
+
+  msg.data = buf + header_len;
+
+  uint8_t checksum = 0;
+  for (unsigned int i = 1; i < total_msg_len; ++i) {
+    checksum += buf[i];
+  }
+
+  if (checksum != 0) {
+    msg.error = ParseError::kChecksum;
+    return msg;
+  }
+
+  msg.error = ParseError::kNone;
+
+  return msg;
 }
+
+enum class PackError {
+  kNone,
+  kOverflow,  // Buffer not big enough for packed message.
+  kDataTooLarge,  // Data packet too large for xbus format.
+};
+
+struct PackResult {
+  PackError error;
+  unsigned int len;
+};
+
+PackResult PackMsg(uint8_t *buf, unsigned int buf_len, MsgId id, const uint8_t *data,
+                   unsigned int data_len) {
+  PackResult result = {.error = PackError::kNone, .len = 0};
+
+  if (data_len > UINT16_MAX) {
+    result.error = PackError::kDataTooLarge;
+    return result;
+  }
+
+  const bool extended = data_len > 254;
+  const unsigned int header_len = extended ? 6 : 4;
+  const unsigned int packed_len = header_len + data_len + 1;
+
+  if (packed_len > buf_len) {
+    result.error = PackError::kOverflow;
+    return result;
+  }
+
+  buf[0] = kPreambleVal;
+  buf[1] = kBidVal;
+  buf[2] = static_cast<uint8_t>(id);
+
+  if (extended) {
+    buf[3] = 0xFF;
+    PackBigEndian16(static_cast<uint16_t>(data_len), &buf[4]);
+  } else {
+    buf[3] = static_cast<uint8_t>(data_len);
+  }
+
+  for (unsigned int i = 0; i < data_len; ++i) {
+    buf[header_len + i] = data[i];
+  }
+
+  uint8_t checksum = 0;
+  for (unsigned int i = 1; i < packed_len - 1; ++i) {
+    checksum -= buf[i];
+  }
+
+  buf[packed_len - 1] = checksum;
+
+  result.len = packed_len;
+  return result;
+}
+
+};  // namespace xsens

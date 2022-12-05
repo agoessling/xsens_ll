@@ -66,27 +66,66 @@ static_assert(offsetof(PortConfigList, host_rs232) == offsetof(PortConfigList, a
 static_assert(offsetof(PortConfigList, host_uart) == offsetof(PortConfigList, array[1]));
 static_assert(offsetof(PortConfigList, rtcm_rs232) == offsetof(PortConfigList, array[2]));
 
-union OptionFlags {
-  struct {
-    uint32_t disable_auto_store : 1;
-    uint32_t disable_auto_measurement : 1;
-    uint32_t enable_beidou : 1;
-    uint32_t reserved0 : 1;
-    uint32_t enable_ahs : 1;
-    uint32_t enable_orientation_smoother : 1;
-    uint32_t enable_configurable_bus_id : 1;
-    uint32_t enable_inrun_compass_calibration : 1;
-    uint32_t reserved1 : 1;
-    uint32_t enable_config_message_at_startup : 1;
-    uint32_t reserved2 : 1;
-    uint32_t enable_position_velocity_smoother : 1;
-    uint32_t enable_continuous_zru : 1;
-    uint32_t reserved3 : 19;
-  };
-  uint32_t raw;
-};
+struct OptionFlags {
+  static OptionFlags From(uint32_t raw) {
+    OptionFlags flags;
 
-static_assert(sizeof(OptionFlags) == 4);
+    unsigned int offset = 0;
+    flags.disable_auto_store = util::UnpackField(raw, offset, 1);
+    flags.disable_auto_measurement = util::UnpackField(raw, offset, 1);
+    flags.enable_beidou = util::UnpackField(raw, offset, 1);
+    flags.reserved0 = util::UnpackField(raw, offset, 1);
+    flags.enable_ahs = util::UnpackField(raw, offset, 1);
+    flags.enable_orientation_smoother = util::UnpackField(raw, offset, 1);
+    flags.enable_configurable_bus_id = util::UnpackField(raw, offset, 1);
+    flags.enable_inrun_compass_calibration = util::UnpackField(raw, offset, 1);
+    flags.reserved1 = util::UnpackField(raw, offset, 1);
+    flags.enable_config_message_at_startup = util::UnpackField(raw, offset, 1);
+    flags.reserved2 = util::UnpackField(raw, offset, 1);
+    flags.enable_position_velocity_smoother = util::UnpackField(raw, offset, 1);
+    flags.enable_continuous_zru = util::UnpackField(raw, offset, 1);
+    flags.reserved3 = util::UnpackField(raw, offset, 19);
+
+    return flags;
+  }
+
+  uint32_t Raw() const {
+    uint32_t raw = 0;
+
+    unsigned int offset = 0;
+    util::PackField(raw, disable_auto_store, offset, 1);
+    util::PackField(raw, disable_auto_measurement, offset, 1);
+    util::PackField(raw, enable_beidou, offset, 1);
+    util::PackField(raw, reserved0, offset, 1);
+    util::PackField(raw, enable_ahs, offset, 1);
+    util::PackField(raw, enable_orientation_smoother, offset, 1);
+    util::PackField(raw, enable_configurable_bus_id, offset, 1);
+    util::PackField(raw, enable_inrun_compass_calibration, offset, 1);
+    util::PackField(raw, reserved1, offset, 1);
+    util::PackField(raw, enable_config_message_at_startup, offset, 1);
+    util::PackField(raw, reserved2, offset, 1);
+    util::PackField(raw, enable_position_velocity_smoother, offset, 1);
+    util::PackField(raw, enable_continuous_zru, offset, 1);
+    util::PackField(raw, reserved3, offset, 19);
+
+    return raw;
+  }
+
+  uint32_t disable_auto_store : 1;
+  uint32_t disable_auto_measurement : 1;
+  uint32_t enable_beidou : 1;
+  uint32_t reserved0 : 1;
+  uint32_t enable_ahs : 1;
+  uint32_t enable_orientation_smoother : 1;
+  uint32_t enable_configurable_bus_id : 1;
+  uint32_t enable_inrun_compass_calibration : 1;
+  uint32_t reserved1 : 1;
+  uint32_t enable_config_message_at_startup : 1;
+  uint32_t reserved2 : 1;
+  uint32_t enable_position_velocity_smoother : 1;
+  uint32_t enable_continuous_zru : 1;
+  uint32_t reserved3 : 19;
+};
 
 union Vector3f {
   struct {
@@ -184,6 +223,8 @@ union GnssOptions {
 };
 
 static_assert(sizeof(GnssOptions) == 4);
+static_assert(sizeof(GnssPlatform) == 4);
+static_assert(sizeof(GnssNmeaOptions) == 4);
 static_assert(offsetof(GnssOptions, ublox) == offsetof(GnssOptions, nmea));
 static_assert(offsetof(GnssOptions, ublox) == offsetof(GnssOptions, raw));
 

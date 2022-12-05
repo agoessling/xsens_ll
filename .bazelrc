@@ -1,3 +1,4 @@
+build -c opt
 build --copt="-Wall"
 build --copt="-Werror"
 build --copt="-fdiagnostics-color"

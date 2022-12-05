@@ -42,10 +42,10 @@ enum class MsgId {
   kSetSyncSettingsAck = 0x2D,  // Device acknowledges SetSyncSettings
   kGoToConfig = 0x30,
   kGoToConfigAck = 0x31,
-  kMTData = 0x32,  // Message with un-calibrated raw data, calibrateddata, orientation data or GPS
+  kMtData = 0x32,  // Message with un-calibrated raw data, calibrateddata, orientation data or GPS
                    // PVT data (obsolete)
   kReqData = 0x34,  // Host requests device to send MTData2 message
-  kMTData2 = 0x36,  // Message with one or more output data packets
+  kMtData2 = 0x36,  // Message with one or more output data packets
   kWakeUp = 0x3E,
   kWakeUpAck = 0x3F,
   kReset = 0x40,

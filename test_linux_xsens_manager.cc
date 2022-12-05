@@ -28,6 +28,7 @@ int main(int argc, char **argv) {
   argparse::ArgumentParser program("test_linux_xsens_manager");
   program.add_argument("-p", "--port").required().help("Serial port.");
   program.add_argument("-b", "--baudrate").scan<'i', int>().required().help("Serial baud rate.");
+  program.add_argument("--run").scan<'f', double>().help("Take measurements for duration.");
   program.add_argument("--mti-8").default_value(false).implicit_value(true).help("Test Mti-8.");
   program.add_argument("--defaults")
       .default_value(false)
@@ -233,9 +234,73 @@ int main(int argc, char **argv) {
   std::cout << "  Options: " << gnss_settings.options.raw << std::endl;
 
   std::cout << "Set GNSS settings. " << std::flush;
-  gnss_settings.baud = BaudRate::k921600;
+  gnss_settings.type = GnssType::kUbloxZedF9p;
+  gnss_settings.baud = BaudRate::k230400;
+  gnss_settings.msg_rate = 5;
+  gnss_settings.options.ublox = GnssPlatform::kAirborneLt2g;
   CheckOrExit(manager->SetGnssSettings(gnss_settings));
   std::cout << std::endl;
+
+  OutputConfig configs[] = {
+      {.type_id = PacketCounter::id, .rate = 100},
+      {.type_id = EulerAngles<Float32, Ned>::id, .rate = 100},
+      {.type_id = StatusWord::id, .rate = 100},
+      {.type_id = UtcTime::id, .rate = 100},
+  };
+
+  std::cout << "Setting output configs. " << std::flush;
+  CheckOrExit(manager->SetOutputConfiguration(configs, sizeof(configs) / sizeof(configs[0])));
+  std::cout << std::endl;
+
+  if (auto run_time = program.present<double>("--run")) {
+    std::cout << "Going to measurement. " << std::flush;
+    CheckOrExit(manager->GoToMeasurement());
+    std::cout << std::endl;
+
+    using namespace std::chrono;
+    time_point alarm = system_clock::now() + duration<double>(*run_time);
+    while (system_clock::now() < alarm) {
+      XsensManager::MsgInfo info = manager->ReadMsg();
+
+      if (info.status != XsensManager::ReadStatus::kSuccess) continue;
+      if (info.msg.id != MsgId::kMtData2) continue;
+
+      auto euler = GetData<EulerAngles<Float32, Ned>>(info.msg.data, info.msg.len);
+      auto status = GetData<StatusWord>(info.msg.data, info.msg.len);
+      auto utc_time = GetData<UtcTime>(info.msg.data, info.msg.len);
+
+      if (!euler || !status || !utc_time) {
+        std::cout << "Output data not present in MTData2." << std::endl;
+        continue;
+      }
+
+      std::cout << static_cast<int>(utc_time->year) << "-" << static_cast<int>(utc_time->month)
+                << "-" << static_cast<int>(utc_time->day) << " " << static_cast<int>(utc_time->hour)
+                << ":" << static_cast<int>(utc_time->minute) << ":"
+                << static_cast<int>(utc_time->second) << std::endl;
+
+      std::cout << "Roll: " << euler->x << std::endl;
+      std::cout << "Pitch: " << euler->y << std::endl;
+      std::cout << "Yaw: " << euler->z << std::endl;
+
+      std::cout << "Status Word:" << std::endl;
+      std::cout << "  self_test: " << static_cast<int>(status->status_byte.self_test) << std::endl;
+      std::cout << "  filter_valid: " << static_cast<int>(status->status_byte.filter_valid)
+                << std::endl;
+      std::cout << "  gnss_fix: " << static_cast<int>(status->status_byte.gnss_fix) << std::endl;
+      std::cout << "  no_rot: " << static_cast<int>(status->status_byte.no_rotation_status())
+                << std::endl;
+      std::cout << "  rep_mo: " << static_cast<int>(status->status_byte.rep_mo) << std::endl;
+      std::cout << "  clock_sync: " << static_cast<int>(status->status_byte.clock_sync)
+                << std::endl;
+
+      std::cout << std::endl;
+    }
+
+    std::cout << "Going to config. " << std::flush;
+    CheckOrExit(manager->GoToConfig());
+    std::cout << std::endl;
+  }
 
   if (program.get<bool>("--defaults")) {
     std::cout << "Restoring to factory defaults. ";

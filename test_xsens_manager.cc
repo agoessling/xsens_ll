@@ -200,7 +200,7 @@ TEST_F(XsensManagerTest, MultipleMsgs) {
   info = manager_.ReadMsg();
 
   EXPECT_EQ(info.status, XsensManager::ReadStatus::kSuccess);
-  EXPECT_EQ(manager_.ReadCalls(), 2);
+  EXPECT_EQ(manager_.ReadCalls(), 1);
   EXPECT_EQ(info.msg.id, MsgId::kGoToConfig);
   EXPECT_EQ(info.msg.len, 0);
   EXPECT_EQ(info.msg.data[0], kGoToConfigMsg[4]);
@@ -208,7 +208,7 @@ TEST_F(XsensManagerTest, MultipleMsgs) {
   info = manager_.ReadMsg();
 
   EXPECT_EQ(info.status, XsensManager::ReadStatus::kSuccess);
-  EXPECT_EQ(manager_.ReadCalls(), 3);
+  EXPECT_EQ(manager_.ReadCalls(), 1);
   EXPECT_EQ(info.msg.id, MsgId::kSetBaudrate);
   EXPECT_EQ(info.msg.len, 1);
   EXPECT_EQ(info.msg.data[0], kSetBaudrateMsg[4]);
@@ -232,7 +232,7 @@ TEST_F(XsensManagerTest, MultipleMsgs) {
   info = manager_.ReadMsg();
 
   EXPECT_EQ(info.status, XsensManager::ReadStatus::kSuccess);
-  EXPECT_EQ(manager_.ReadCalls(), 2);
+  EXPECT_EQ(manager_.ReadCalls(), 1);
   EXPECT_EQ(info.msg.id, MsgId::kGoToConfig);
   EXPECT_EQ(info.msg.len, 0);
   EXPECT_EQ(info.msg.data[0], kGoToConfigMsg[4]);
@@ -240,7 +240,7 @@ TEST_F(XsensManagerTest, MultipleMsgs) {
   info = manager_.ReadMsg();
 
   EXPECT_EQ(info.status, XsensManager::ReadStatus::kSuccess);
-  EXPECT_EQ(manager_.ReadCalls(), 3);
+  EXPECT_EQ(manager_.ReadCalls(), 1);
   EXPECT_EQ(info.msg.id, MsgId::kSetBaudrate);
   EXPECT_EQ(info.msg.len, 1);
   EXPECT_EQ(info.msg.data[0], kSetBaudrateMsg[4]);
@@ -264,7 +264,7 @@ TEST_F(XsensManagerTest, MultipleMsgs) {
   info = manager_.ReadMsg();
 
   EXPECT_EQ(info.status, XsensManager::ReadStatus::kSuccess);
-  EXPECT_EQ(manager_.ReadCalls(), 3);
+  EXPECT_EQ(manager_.ReadCalls(), 2);
   EXPECT_EQ(info.msg.id, MsgId::kGoToConfig);
   EXPECT_EQ(info.msg.len, 0);
   EXPECT_EQ(info.msg.data[0], kGoToConfigMsg[4]);
@@ -272,10 +272,33 @@ TEST_F(XsensManagerTest, MultipleMsgs) {
   info = manager_.ReadMsg();
 
   EXPECT_EQ(info.status, XsensManager::ReadStatus::kSuccess);
-  EXPECT_EQ(manager_.ReadCalls(), 4);
+  EXPECT_EQ(manager_.ReadCalls(), 2);
   EXPECT_EQ(info.msg.id, MsgId::kSetBaudrate);
   EXPECT_EQ(info.msg.len, 1);
   EXPECT_EQ(info.msg.data[0], kSetBaudrateMsg[4]);
+}
+
+bool ReadStatusNoError(XsensManager::ReadStatus status) {
+  using E = XsensManager::ReadStatus;
+  return status == E::kSuccess || status == E::kNoMsg || status == E::kReadingMsg;
+}
+
+TEST_F(XsensManagerTest, MultipleMsgPerRead) {
+  manager_.Reset();
+
+  const unsigned int len_per_read = 5 * kSetBaudrateMsg.size();
+
+  for (unsigned int i = 0; i < 2048 / len_per_read; ++i) {
+    manager_.AppendReadData(kSetBaudrateMsg);
+    manager_.AppendReadData(kSetBaudrateMsg);
+    manager_.AppendReadData(kSetBaudrateMsg);
+    manager_.AppendReadData(kSetBaudrateMsg);
+    manager_.AppendReadData(kSetBaudrateMsg);
+
+    XsensManager::MsgInfo info = manager_.ReadMsg();
+
+    ASSERT_PRED1(ReadStatusNoError, info.status);
+  }
 }
 
 TEST_F(XsensManagerTest, MsgsWithErrors) {
@@ -294,7 +317,7 @@ TEST_F(XsensManagerTest, MsgsWithErrors) {
   info = manager_.ReadMsg();
 
   EXPECT_EQ(info.status, XsensManager::ReadStatus::kSuccess);
-  EXPECT_EQ(manager_.ReadCalls(), 2);
+  EXPECT_EQ(manager_.ReadCalls(), 1);
   EXPECT_EQ(info.msg.id, MsgId::kSetBaudrate);
   EXPECT_EQ(info.msg.len, 1);
   EXPECT_EQ(info.msg.data[0], kSetBaudrateMsg[4]);
@@ -317,13 +340,13 @@ TEST_F(XsensManagerTest, MsgsWithErrors) {
   info = manager_.ReadMsg();
 
   EXPECT_EQ(info.status, XsensManager::ReadStatus::kErrorParse);
-  EXPECT_EQ(manager_.ReadCalls(), 2);
+  EXPECT_EQ(manager_.ReadCalls(), 1);
   EXPECT_EQ(info.msg.error, ParseError::kBid);
 
   info = manager_.ReadMsg();
 
   EXPECT_EQ(info.status, XsensManager::ReadStatus::kSuccess);
-  EXPECT_EQ(manager_.ReadCalls(), 3);
+  EXPECT_EQ(manager_.ReadCalls(), 1);
   EXPECT_EQ(info.msg.id, MsgId::kGoToConfig);
   EXPECT_EQ(info.msg.len, 0);
   EXPECT_EQ(info.msg.data[0], kGoToConfigMsg[4]);
@@ -368,7 +391,7 @@ TEST_F(XsensManagerTest, PreambleChecksum) {
   info = manager_.ReadMsg();
 
   EXPECT_EQ(info.status, XsensManager::ReadStatus::kSuccess);
-  EXPECT_EQ(manager_.ReadCalls(), 2);
+  EXPECT_EQ(manager_.ReadCalls(), 1);
   EXPECT_EQ(info.msg.id, MsgId::kSetBaudrate);
   EXPECT_EQ(info.msg.len, 1);
   EXPECT_EQ(info.msg.data[0], kSetBaudrateMsg[4]);
@@ -417,7 +440,7 @@ TEST_F(XsensManagerTest, AdvanceReadBuffer) {
   info = manager_.ReadMsg();
 
   EXPECT_EQ(info.status, XsensManager::ReadStatus::kSuccess);
-  EXPECT_EQ(manager_.ReadCalls(), 3);
+  EXPECT_EQ(manager_.ReadCalls(), 2);
   EXPECT_EQ(info.msg.id, MsgId::kSetBaudrate);
   EXPECT_EQ(info.msg.len, 1);
   EXPECT_EQ(info.msg.data[0], kSetBaudrateMsg[4]);

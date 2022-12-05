@@ -64,14 +64,6 @@ enum class CoordinateSystemId {
   kNwu = 0x08,
 };
 
-struct OutputConfig {
-  uint16_t id;
-  TypeId type;
-  PrecisionId precision;
-  CoordinateSystemId coords;
-  uint16_t rate;
-};
-
 enum class RtkSolution {
   kNone = 0x00,
   kFloating = 0x01,

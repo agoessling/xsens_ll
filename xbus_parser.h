@@ -1,6 +1,8 @@
 #pragma once
 
 #include <cstdint>
+#include <cstring>
+#include <type_traits>
 
 #include "msg_id.h"
 
@@ -29,7 +31,9 @@ template <typename T>
 T UnpackBigEndian16(const uint8_t *buf) {
   static_assert(sizeof(T) == 2);
   uint16_t raw_val = (static_cast<uint16_t>(buf[0]) << 8) | (static_cast<uint16_t>(buf[1]) << 0);
-  return reinterpret_cast<T&>(raw_val);
+  T val;
+  memcpy(&val, &raw_val, sizeof(T));
+  return val;
 }
 
 template <typename T>
@@ -37,21 +41,27 @@ T UnpackBigEndian32(const uint8_t *buf) {
   static_assert(sizeof(T) == 4);
   uint32_t raw_val = (static_cast<uint32_t>(buf[0]) << 24) | (static_cast<uint32_t>(buf[1]) << 16) |
                      (static_cast<uint32_t>(buf[2]) << 8) | (static_cast<uint32_t>(buf[3]) << 0);
-  return reinterpret_cast<T&>(raw_val);
+  T val;
+  memcpy(&val, &raw_val, sizeof(T));
+  return val;
 }
 
 template <typename T>
 T UnpackBigEndian48(const uint8_t *buf) {
+  static_assert(std::is_integral_v<T>);
   static_assert(sizeof(T) == 8);
   uint64_t raw_val = (static_cast<uint64_t>(buf[0]) << 40) | (static_cast<uint64_t>(buf[1]) << 32) |
                      (static_cast<uint64_t>(buf[2]) << 24) | (static_cast<uint64_t>(buf[3]) << 16) |
                      (static_cast<uint64_t>(buf[4]) << 8) | (static_cast<uint64_t>(buf[5]) << 0);
-  T data = reinterpret_cast<T&>(raw_val);
+  T val;
+  memcpy(&val, &raw_val, sizeof(T));
 
   // Extend sign.
-  data = (data << 16) >> 16;
+  if constexpr (std::is_signed_v<T>) {
+    val = (val << 16) >> 16;
+  }
 
-  return data;
+  return val;
 }
 
 template <typename T>
@@ -61,13 +71,16 @@ T UnpackBigEndian64(const uint8_t *buf) {
                      (static_cast<uint64_t>(buf[2]) << 40) | (static_cast<uint64_t>(buf[3]) << 32) |
                      (static_cast<uint64_t>(buf[4]) << 24) | (static_cast<uint64_t>(buf[5]) << 16) |
                      (static_cast<uint64_t>(buf[6]) << 8) | (static_cast<uint64_t>(buf[7]) << 0);
-  return reinterpret_cast<T&>(raw_val);
+  T val;
+  memcpy(&val, &raw_val, sizeof(T));
+  return val;
 }
 
 template <typename T>
 void PackBigEndian16(T data, uint8_t *buf) {
   static_assert(sizeof(data) == 2);
-  const uint16_t raw_data = reinterpret_cast<uint16_t&>(data);
+  uint16_t raw_data;
+  memcpy(&raw_data, &data, sizeof(raw_data));
   buf[0] = static_cast<uint8_t>(raw_data >> 8);
   buf[1] = static_cast<uint8_t>(raw_data >> 0);
 }
@@ -75,7 +88,8 @@ void PackBigEndian16(T data, uint8_t *buf) {
 template <typename T>
 void PackBigEndian32(T data, uint8_t *buf) {
   static_assert(sizeof(data) == 4);
-  const uint32_t raw_data = reinterpret_cast<uint32_t&>(data);
+  uint32_t raw_data;
+  memcpy(&raw_data, &data, sizeof(raw_data));
   buf[0] = static_cast<uint8_t>(raw_data >> 24);
   buf[1] = static_cast<uint8_t>(raw_data >> 16);
   buf[2] = static_cast<uint8_t>(raw_data >> 8);
@@ -85,7 +99,8 @@ void PackBigEndian32(T data, uint8_t *buf) {
 template <typename T>
 void PackBigEndian48(T data, uint8_t *buf) {
   static_assert(sizeof(data) == 8);
-  const uint64_t raw_data = reinterpret_cast<uint64_t&>(data);
+  uint64_t raw_data;
+  memcpy(&raw_data, &data, sizeof(raw_data));
   buf[0] = static_cast<uint8_t>(raw_data >> 40);
   buf[1] = static_cast<uint8_t>(raw_data >> 32);
   buf[2] = static_cast<uint8_t>(raw_data >> 24);
@@ -97,7 +112,8 @@ void PackBigEndian48(T data, uint8_t *buf) {
 template <typename T>
 void PackBigEndian64(T data, uint8_t *buf) {
   static_assert(sizeof(data) == 8);
-  const uint64_t raw_data = reinterpret_cast<uint64_t&>(data);
+  uint64_t raw_data;
+  memcpy(&raw_data, &data, sizeof(raw_data));
   buf[0] = static_cast<uint8_t>(raw_data >> 56);
   buf[1] = static_cast<uint8_t>(raw_data >> 48);
   buf[2] = static_cast<uint8_t>(raw_data >> 40);

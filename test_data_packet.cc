@@ -1,4 +1,5 @@
 #include <cstdint>
+#include <cstring>
 #include <numeric>
 #include <optional>
 #include <vector>
@@ -46,7 +47,9 @@ static inline std::vector<uint8_t> Add(const std::vector<uint8_t>& buf, uint8_t 
 template <typename T, typename U>
 T Pun(U data) {
   static_assert(sizeof(T) == sizeof(U));
-  return reinterpret_cast<T&>(data);
+  T val;
+  memcpy(&val, &data, sizeof(val));
+  return val;
 }
 
 TEST(GetData, Temperature) {

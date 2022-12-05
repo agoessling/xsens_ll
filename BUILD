@@ -68,6 +68,7 @@ cc_library(
     hdrs = ["xsens_manager.h"],
     visibility = ["//visibility:public"],
     deps = [
+        ":bitfield",
         ":msg_id",
         ":xbus_parser",
         ":xsens_types",

@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstring>
 
+#include "bitfield.h"
 #include "msg_id.h"
 #include "xbus_parser.h"
 #include "xsens_types.h"
@@ -55,15 +56,19 @@ class XsensManager {
         timeout_us_{default_timeout_us_} {}
 
   MsgInfo ReadMsg() {
-    MsgInfo info = {
-        .status = ReadStatus::kNoMsg,
-        .msg = {.len = 0, .data = nullptr},
-    };
+    MsgInfo info = FindMsgInReadBuffer();
 
+    // Return if error or message found.
+    if (info.status != ReadStatus::kNoMsg && info.status != ReadStatus::kReadingMsg) {
+      return info;
+    }
+
+    // Keep reading until nothing is read or a message or error is found in the stream.
     bool data_available = true;
     while (data_available) {
       // Check for space in receive buffer. (Don't think this can ever be exercised)
       if (kReadBufLen - write_index_ < kBytesPerRead) {
+        write_index_ = 0;
         info.status = ReadStatus::kErrorOverflow;
         return info;
       }
@@ -78,47 +83,12 @@ class XsensManager {
 
       write_index_ += bytes_read;
 
-      // Shift rx buffer to preamble and continue if none found.
-      const bool preamble_found = ShiftMsgBufferToPreamble(start_index_);
-      start_index_ = 0;
+      info = FindMsgInReadBuffer();
 
-      if (!preamble_found) {
-        continue;
-      }
-
-      info.msg = ParseMsg(read_buf_, write_index_);
-
-      if (info.msg.error == ParseError::kNone) {
-        info.status = ReadStatus::kSuccess;
-
-        // Next iteration start after message end.
-        start_index_ = (info.msg.data - read_buf_) + info.msg.len + 1;
-
+      // Return if error or message found.
+      if (info.status != ReadStatus::kNoMsg && info.status != ReadStatus::kReadingMsg) {
         return info;
       }
-
-      // If error anything other than insufficient length.
-      if (info.msg.error != ParseError::kLen) {
-        info.status = ReadStatus::kErrorParse;
-
-        // Next iteration start past this preamble.
-        start_index_ = 1;
-
-        return info;
-      }
-
-      // Message too big.
-      if (info.msg.len + kMaxMsgOverhead > kReadBufLen) {
-        info.status = ReadStatus::kErrorMsgTooLarge;
-
-        // Next iteration start past this preamble.
-        start_index_ = 1;
-
-        return info;
-      }
-
-      // Currently reading message.
-      info.status = ReadStatus::kReadingMsg;
     }
 
     return info;
@@ -132,6 +102,8 @@ class XsensManager {
   }
 
   ConfigResult GoToConfig() { return SendConfig(MsgId::kGoToConfig).result; }
+
+  ConfigResult GoToMeasurement() { return SendConfig(MsgId::kGoToMeasurement).result; }
 
   ConfigResult GetDeviceId(uint32_t& device_id) {
     ConfigResponse resp = SendConfig(MsgId::kReqDID);
@@ -250,16 +222,16 @@ class XsensManager {
     if (resp.result != ConfigResult::kSuccess) return resp.result;
     if (resp.len != 4) return ConfigResult::kErrorLen;
 
-    flags.raw = UnpackBigEndian32<uint32_t>(resp.data);
+    flags = OptionFlags::From(UnpackBigEndian32<uint32_t>(resp.data));
 
     return ConfigResult::kSuccess;
   }
 
-  ConfigResult SetOptionFlags(const OptionFlags& flag) {
+  ConfigResult SetOptionFlags(const OptionFlags& flags) {
     uint8_t data[8];
 
-    const uint32_t set = flag.raw;
-    const uint32_t clear = ~flag.raw;
+    const uint32_t set = flags.Raw();
+    const uint32_t clear = ~set;
 
     PackBigEndian32(set, data);
     PackBigEndian32(clear, data + 4);
@@ -502,6 +474,57 @@ class XsensManager {
     }
 
     return true;
+  }
+
+  MsgInfo FindMsgInReadBuffer() {
+    MsgInfo info = {
+        .status = ReadStatus::kNoMsg,
+        .msg = {.len = 0, .data = nullptr},
+    };
+
+    // Shift rx buffer to preamble and return if none found.
+    const bool preamble_found = ShiftMsgBufferToPreamble(start_index_);
+    start_index_ = 0;
+
+    if (!preamble_found) {
+      return info;
+    }
+
+    info.msg = ParseMsg(read_buf_, write_index_);
+
+    if (info.msg.error == ParseError::kNone) {
+      info.status = ReadStatus::kSuccess;
+
+      // Next iteration start after message end.
+      start_index_ = (info.msg.data - read_buf_) + info.msg.len + 1;
+
+      return info;
+    }
+
+    // If error anything other than insufficient length.
+    if (info.msg.error != ParseError::kLen) {
+      info.status = ReadStatus::kErrorParse;
+
+      // Next iteration start past this preamble.
+      start_index_ = 1;
+
+      return info;
+    }
+
+    // Message too big.
+    if (info.msg.len + kMaxMsgOverhead > kReadBufLen) {
+      info.status = ReadStatus::kErrorMsgTooLarge;
+
+      // Next iteration start past this preamble.
+      start_index_ = 1;
+
+      return info;
+    }
+
+    // Currently reading message.
+    info.status = ReadStatus::kReadingMsg;
+
+    return info;
   }
 
   bool WriteAllBytesBlocking(const uint8_t *buf, unsigned int len) {

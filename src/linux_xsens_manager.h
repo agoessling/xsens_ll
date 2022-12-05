@@ -10,7 +10,7 @@
 #include <memory>
 #include <string>
 
-#include "xsens_manager.h"
+#include "src/xsens_manager.h"
 
 namespace xsens {
 namespace linux {

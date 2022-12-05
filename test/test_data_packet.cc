@@ -6,8 +6,8 @@
 
 #include <gtest/gtest.h>
 
-#include "bitfield.h"
-#include "data_packet.h"
+#include "src/bitfield.h"
+#include "src/data_packet.h"
 
 using namespace xsens::data;
 using namespace xsens::util;

@@ -2,8 +2,8 @@
 
 #include <gtest/gtest.h>
 
-#include "msg_id.h"
-#include "xbus_parser.h"
+#include "src/msg_id.h"
+#include "src/xbus_parser.h"
 
 using namespace xsens;
 

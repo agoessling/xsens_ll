@@ -4,7 +4,7 @@
 
 #include <gtest/gtest.h>
 
-#include "xsens_manager.h"
+#include "src/xsens_manager.h"
 
 using namespace xsens;
 

@@ -3,8 +3,8 @@
 #include <cstdint>
 #include <optional>
 
-#include "bitfield.h"
-#include "xbus_parser.h"
+#include "src/bitfield.h"
+#include "src/xbus_parser.h"
 
 namespace xsens {
 namespace data {

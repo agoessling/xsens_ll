@@ -4,10 +4,10 @@
 #include <cstdint>
 #include <cstring>
 
-#include "bitfield.h"
-#include "msg_id.h"
-#include "xbus_parser.h"
-#include "xsens_types.h"
+#include "src/bitfield.h"
+#include "src/msg_id.h"
+#include "src/xbus_parser.h"
+#include "src/xsens_types.h"
 
 namespace xsens {
 

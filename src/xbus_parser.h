@@ -4,7 +4,7 @@
 #include <cstring>
 #include <type_traits>
 
-#include "msg_id.h"
+#include "src/msg_id.h"
 
 namespace xsens {
 

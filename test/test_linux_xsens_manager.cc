@@ -6,9 +6,9 @@
 
 #include <argparse.hpp>
 
-#include "data_packet.h"
-#include "linux_xsens_manager.h"
-#include "xsens_types.h"
+#include "src/data_packet.h"
+#include "src/linux_xsens_manager.h"
+#include "src/xsens_types.h"
 
 using namespace xsens;
 using namespace xsens::linux;

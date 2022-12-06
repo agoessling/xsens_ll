@@ -36,6 +36,7 @@ cc_library(
         "//src:xsens_manager",
         "//src:xsens_types",
     ],
+    includes = ["src"],
 )
 
 cc_library(
@@ -45,4 +46,5 @@ cc_library(
         ":xsens_ll",
         "//src:linux_xsens_manager",
     ],
+    includes = ["src"],
 )

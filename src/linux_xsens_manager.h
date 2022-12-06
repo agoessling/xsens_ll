@@ -9,6 +9,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "src/xsens_manager.h"
 
@@ -39,6 +40,26 @@ class SerialXsensManager : public XsensManager {
   // Not copyable.
   SerialXsensManager(const SerialXsensManager&) = delete;
   SerialXsensManager& operator=(const SerialXsensManager&) = delete;
+
+  std::pair<ConfigResult, std::string> GetProductCode() {
+    const char *product_code_raw;
+    unsigned int len;
+
+    ConfigResult result = XsensManager::GetProductCode(product_code_raw, len);
+
+    if (result == ConfigResult::kSuccess) {
+      // Remove trailing whitespace.
+      while (len > 0 && product_code_raw[len - 1] == ' ') len--;
+
+      return std::make_pair(result, std::string(product_code_raw, product_code_raw + len));
+    } else {
+      return std::make_pair(result, "");
+    }
+  }
+
+  ConfigResult SetFilterProfile(const std::string& profile) {
+    return XsensManager::SetFilterProfile(profile.data(), profile.size());
+  }
 
  private:
   static constexpr int kNumSysCallRetries = 3;

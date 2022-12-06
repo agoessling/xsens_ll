@@ -61,10 +61,8 @@ int main(int argc, char **argv) {
   std::cout << std::hex << std::showbase << device_id << std::dec << std::endl;
 
   std::cout << "Product Code: ";
-  const char *product_code_raw;
-  unsigned int len;
-  CheckOrExit(manager->GetProductCode(product_code_raw, len));
-  std::string product_code(product_code_raw, product_code_raw + len);
+  auto [result, product_code] = manager->GetProductCode();
+  CheckOrExit(result);
   std::cout << product_code << std::endl;
 
   std::cout << "Firmware Revision: ";
@@ -196,8 +194,7 @@ int main(int argc, char **argv) {
     std::cout << label << std::endl;
 
     std::cout << "Setting filter profile. " << std::flush;
-    std::string filter = "General_RTK";
-    CheckOrExit(manager->SetFilterProfile(filter.data(), filter.size()));
+    CheckOrExit(manager->SetFilterProfile("General_RTK"));
     std::cout << std::endl;
   }
 

@@ -55,6 +55,10 @@ class XsensManager {
         default_timeout_us_{timeout_us},
         timeout_us_{default_timeout_us_} {}
 
+  static bool ReadStatusNoError(const ReadStatus& status) {
+    return status == ReadStatus::kSuccess || status == ReadStatus::kNoMsg || status == ReadStatus::kReadingMsg;
+  }
+
   MsgInfo ReadMsg() {
     MsgInfo info = FindMsgInReadBuffer();
 

@@ -799,8 +799,30 @@ template <typename Precision>
 struct MagneticField
     : Vector3<MagneticField<Precision>, TypeId::kMagneticField, Precision, Sensor> {};
 
+//template <typename Precision>
+//struct PositionEcef : Vector3<PositionEcef<Precision>, TypeId::kPositionEcef, Precision, Sensor> {};
 template <typename Precision>
-struct PositionEcef : Vector3<PositionEcef<Precision>, TypeId::kPositionEcef, Precision, Sensor> {};
+struct PositionEcef {
+  static constexpr uint16_t id =
+      GetDataId(TypeId::kPositionEcef, Precision::id, CoordinateSystemId::kSensor);
+
+  static std::optional<PositionEcef> Unpack(const uint8_t *buf, unsigned int len) {
+    if (len > 3 * Precision::size) return std::nullopt;
+
+    unsigned int index = 0;
+
+    PositionEcef data;
+    index += UnpackPrimitive<Precision>(data.x, buf + index);
+    index += UnpackPrimitive<Precision>(data.y, buf + index);
+    index += UnpackPrimitive<Precision>(data.z, buf + index);
+
+    return data;
+  }
+
+  typename Precision::type x;
+  typename Precision::type y;
+  typename Precision::type z;
+};
 
 template <typename Precision>
 struct LatLon {

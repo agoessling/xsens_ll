@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <iostream>
+#include <fstream>
 #include <memory>
 #include <string>
 #include <utility>
@@ -15,6 +16,8 @@
 
 namespace xsens {
 namespace linux {
+
+static std::ofstream g_stream;
 
 class SerialXsensManager : public XsensManager {
  public:
@@ -29,6 +32,11 @@ class SerialXsensManager : public XsensManager {
     }
 
     if (!SetupBlockingSerial(manager->fd_, baud_rate, timeout_deciseconds)) {
+      return nullptr;
+    }
+
+    g_stream.open("/home/agoessling/raw_bytes.txt");
+    if (!g_stream) {
       return nullptr;
     }
 
@@ -126,6 +134,14 @@ class SerialXsensManager : public XsensManager {
       if (ret >= 0) break;
       perror("read() failed");
     }
+
+    for (unsigned int i = 0; i < ret; ++i) {
+      g_stream << std::hex << std::showbase << static_cast<int>(buf[i]) << ",";
+      if (i == ret - 1) {
+        g_stream << std::endl;
+      }
+    }
+
     return ret;
   }
 

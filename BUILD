@@ -28,6 +28,7 @@ clang_format(
 
 cc_library(
     name = "xsens_ll",
+    includes = ["src"],
     visibility = ["//visibility:public"],
     deps = [
         "//src:data_packet",
@@ -36,15 +37,14 @@ cc_library(
         "//src:xsens_manager",
         "//src:xsens_types",
     ],
-    includes = ["src"],
 )
 
 cc_library(
     name = "xsens_ll_linux",
+    includes = ["src"],
     visibility = ["//visibility:public"],
     deps = [
         ":xsens_ll",
         "//src:linux_xsens_manager",
     ],
-    includes = ["src"],
 )

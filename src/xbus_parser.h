@@ -124,7 +124,7 @@ void PackBigEndian64(T data, uint8_t *buf) {
   buf[7] = static_cast<uint8_t>(raw_data >> 0);
 }
 
-ParsedMsg ParseMsg(const uint8_t *buf, unsigned int len) {
+static ParsedMsg ParseMsg(const uint8_t *buf, unsigned int len) {
   ParsedMsg msg = {.len = 0, .data = nullptr};
 
   // Minimum message length.
@@ -197,8 +197,8 @@ struct PackResult {
   unsigned int len;
 };
 
-PackResult PackMsg(uint8_t *buf, unsigned int buf_len, MsgId id, const uint8_t *data,
-                   unsigned int data_len) {
+static PackResult PackMsg(uint8_t *buf, unsigned int buf_len, MsgId id, const uint8_t *data,
+                          unsigned int data_len) {
   PackResult result = {.error = PackError::kNone, .len = 0};
 
   if (data_len > UINT16_MAX) {

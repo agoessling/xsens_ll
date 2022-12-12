@@ -106,6 +106,11 @@ class XsensManager {
     start_index_ = 0;
   }
 
+  void FlushMessages() {
+    FlushBytes();
+    ResetReadBuffer();
+  }
+
   ConfigResult GoToConfig() { return SendConfig(MsgId::kGoToConfig).result; }
 
   ConfigResult GoToMeasurement() { return SendConfig(MsgId::kGoToMeasurement).result; }
